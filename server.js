@@ -545,6 +545,61 @@ app.post('/api/admin/set-plan', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────
+// Admin Stats
+// ─────────────────────────────────────────────────────────────────
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  const t0 = Date.now();
+  const [
+    { data: users },
+    { data: properties },
+    { count: msgCount },
+    { count: incomeCount },
+    { count: expenseCount },
+  ] = await Promise.all([
+    supabase.from('users').select('id, role, status, plan, created_at, first_name, last_name, email').order('created_at', { ascending: false }),
+    supabase.from('properties').select('id, user_id, value, loan'),
+    supabase.from('messages').select('*', { count: 'exact', head: true }),
+    supabase.from('income_log').select('*', { count: 'exact', head: true }),
+    supabase.from('expenses').select('*', { count: 'exact', head: true }),
+  ]);
+
+  const dbMs = Date.now() - t0;
+  const totalValue  = (properties || []).reduce((s, p) => s + (p.value || 0), 0);
+  const totalLoan   = (properties || []).reduce((s, p) => s + (p.loan  || 0), 0);
+
+  res.json({
+    server: {
+      uptime:  Math.floor(process.uptime()),
+      memory:  Math.round(process.memoryUsage().rss / 1024 / 1024),
+      node:    process.version,
+      env:     process.env.NODE_ENV || 'development',
+      dbPingMs: dbMs,
+    },
+    users: {
+      total:    (users || []).length,
+      active:   (users || []).filter(u => u.status === 'active').length,
+      admins:   (users || []).filter(u => u.role === 'admin').length,
+      advisors: (users || []).filter(u => u.role === 'advisor').length,
+      free:     (users || []).filter(u => u.plan === 'free').length,
+      investor: (users || []).filter(u => u.plan === 'investor').length,
+      portfolio:(users || []).filter(u => u.plan === 'portfolio').length,
+      recent:   (users || []).slice(0, 5),
+    },
+    properties: {
+      total:      (properties || []).length,
+      totalValue,
+      totalLoan,
+      totalEquity: totalValue - totalLoan,
+    },
+    activity: {
+      messages: msgCount || 0,
+      incomeRecords: incomeCount || 0,
+      expenseRecords: expenseCount || 0,
+    },
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
 // Health
 // ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

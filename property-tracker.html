@@ -2473,6 +2473,15 @@
 
     <!-- ADMIN PAGE -->
     <div class="page" id="page-admin">
+
+      <!-- Admin Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--gray-100);padding-bottom:0;">
+        <button id="admin-tab-users" onclick="switchAdminTab('users')" style="padding:8px 18px;border:none;background:none;font-size:14px;font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px;cursor:pointer;">👥 Users</button>
+        <button id="admin-tab-system" onclick="switchAdminTab('system')" style="padding:8px 18px;border:none;background:none;font-size:14px;font-weight:600;color:var(--gray-400);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;">🖥️ System</button>
+      </div>
+
+      <!-- Users Tab -->
+      <div id="admin-panel-users">
       <div class="stats-grid" style="margin-bottom:20px;">
         <div class="stat-card">
           <div class="stat-card-accent" style="background:#0176D3;"></div>
@@ -2617,6 +2626,60 @@
       <div class="detail-card" style="padding:0; overflow:hidden;">
         <div id="admin-blog-list"><!-- filled by JS --></div>
       </div>
+      </div><!-- end admin-panel-users -->
+
+      <!-- System Tab -->
+      <div id="admin-panel-system" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <span class="section-title">System Monitor</span>
+          <button class="btn btn-outline btn-sm" onclick="loadSystemStats()">↻ Refresh</button>
+        </div>
+
+        <!-- Server Status -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🖥️ Server</span></div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">API Status</div><div class="stat-value" id="sys-api-status">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">DB Ping</div><div class="stat-value" id="sys-db-ping">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Uptime</div><div class="stat-value" id="sys-uptime">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">Memory (RAM)</div><div class="stat-value" id="sys-memory">–</div></div></div>
+        </div>
+
+        <!-- User Stats -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">👥 Users</span></div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Total Users</div><div class="stat-value" id="sys-users-total">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Active</div><div class="stat-value" id="sys-users-active">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Advisors</div><div class="stat-value" id="sys-users-advisors">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">Paid Plans</div><div class="stat-value" id="sys-users-paid">–</div></div></div>
+        </div>
+
+        <!-- Portfolio Stats -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🏠 Portfolio (Platform-wide)</span></div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Total Properties</div><div class="stat-value" id="sys-props-total">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Total Value</div><div class="stat-value" style="font-size:16px;" id="sys-props-value">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Total Loans</div><div class="stat-value" style="font-size:16px;" id="sys-props-loan">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Total Equity</div><div class="stat-value" style="font-size:16px;" id="sys-props-equity">–</div></div></div>
+        </div>
+
+        <!-- Activity -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">📊 Activity</span></div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-card-accent" style="background:#06B6D4;"></div><div class="stat-card-body"><div class="stat-label">Messages</div><div class="stat-value" id="sys-messages">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Income Records</div><div class="stat-value" id="sys-income">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Expense Records</div><div class="stat-value" id="sys-expenses">–</div></div></div>
+        </div>
+
+        <!-- Recent Signups -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🆕 Recent Signups</span></div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:var(--gray-50);"><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Name</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Email</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Role</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Joined</th></tr></thead>
+            <tbody id="sys-recent-users"></tbody>
+          </table>
+        </div>
+      </div><!-- end admin-panel-system -->
+
     </div>
 
     <!-- BLOG PAGE (read-only for all users) -->
@@ -4190,6 +4253,64 @@ function showAdvisorClientReport(clientId, fy) {
 }
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
+function switchAdminTab(tab) {
+  document.getElementById('admin-panel-users').style.display  = tab === 'users'  ? '' : 'none';
+  document.getElementById('admin-panel-system').style.display = tab === 'system' ? '' : 'none';
+  document.getElementById('admin-tab-users').style.color        = tab === 'users'  ? 'var(--primary)' : 'var(--gray-400)';
+  document.getElementById('admin-tab-system').style.color       = tab === 'system' ? 'var(--primary)' : 'var(--gray-400)';
+  document.getElementById('admin-tab-users').style.borderBottomColor  = tab === 'users'  ? 'var(--primary)' : 'transparent';
+  document.getElementById('admin-tab-system').style.borderBottomColor = tab === 'system' ? 'var(--primary)' : 'transparent';
+  if (tab === 'system') loadSystemStats();
+}
+
+async function loadSystemStats() {
+  const fmt = n => '$' + (n||0).toLocaleString('en-AU', {maximumFractionDigits:0});
+  const fmtUptime = s => {
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  document.getElementById('sys-api-status').textContent = '⏳ Checking…';
+  try {
+    const data = await apiCall('GET', '/admin/stats');
+
+    // Server
+    document.getElementById('sys-api-status').innerHTML = '<span style="color:var(--success);">✅ Online</span>';
+    document.getElementById('sys-db-ping').textContent  = data.server.dbPingMs + ' ms';
+    document.getElementById('sys-uptime').textContent   = fmtUptime(data.server.uptime);
+    document.getElementById('sys-memory').textContent   = data.server.memory + ' MB';
+
+    // Users
+    document.getElementById('sys-users-total').textContent   = data.users.total;
+    document.getElementById('sys-users-active').textContent  = data.users.active;
+    document.getElementById('sys-users-advisors').textContent= data.users.advisors;
+    document.getElementById('sys-users-paid').textContent    = (data.users.investor||0) + (data.users.portfolio||0);
+
+    // Properties
+    document.getElementById('sys-props-total').textContent  = data.properties.total;
+    document.getElementById('sys-props-value').textContent  = fmt(data.properties.totalValue);
+    document.getElementById('sys-props-loan').textContent   = fmt(data.properties.totalLoan);
+    document.getElementById('sys-props-equity').textContent = fmt(data.properties.totalEquity);
+
+    // Activity
+    document.getElementById('sys-messages').textContent = data.activity.messages;
+    document.getElementById('sys-income').textContent   = data.activity.incomeRecords;
+    document.getElementById('sys-expenses').textContent = data.activity.expenseRecords;
+
+    // Recent users
+    const tbody = document.getElementById('sys-recent-users');
+    tbody.innerHTML = (data.users.recent || []).map(u => `
+      <tr style="border-top:1px solid var(--gray-100);">
+        <td style="padding:10px 14px;font-size:13px;">${u.first_name} ${u.last_name}</td>
+        <td style="padding:10px 14px;font-size:13px;color:var(--gray-500);">${u.email}</td>
+        <td style="padding:10px 14px;font-size:13px;">${u.role}</td>
+        <td style="padding:10px 14px;font-size:13px;color:var(--gray-400);">${(u.created_at||'').slice(0,10)}</td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('sys-api-status').innerHTML = '<span style="color:var(--danger);">❌ Error</span>';
+  }
+}
+
 function renderAdmin() {
   const users = getUsers();
   const session = getSession();
