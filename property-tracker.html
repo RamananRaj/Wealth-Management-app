@@ -1178,19 +1178,40 @@
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
   }
-  .uli-amt-wrap { position: relative; }
-  .uli-amt-wrap::before {
-    content: '$';
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
+  .uli-amt-wrap {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 7px;
+    background: white;
+    height: 34px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .uli-amt-wrap:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+  }
+  .uli-dollar {
+    padding: 0 4px 0 10px;
     font-size: 13px;
     color: var(--gray-400);
-    pointer-events: none;
-    z-index: 1;
+    flex-shrink: 0;
+    user-select: none;
   }
-  .uli-amt-wrap input { padding-left: 26px; }
+  .uli-amt-wrap input {
+    flex: 1;
+    min-width: 0;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 8px 0 2px !important;
+    height: 100%;
+    background: transparent;
+    font-size: 13px;
+    color: var(--gray-900);
+    font-family: inherit;
+  }
+  .uli-amt-wrap input:focus { outline: none; }
   .uli-del {
     background: none; border: none; cursor: pointer;
     color: var(--gray-300);
@@ -6793,6 +6814,7 @@ function renderUliTable() {
         <input type="date" value="${row.date||''}" onchange="uliUpdate(${idx},'date',this.value)">
         <input type="text" value="${row.description||''}" placeholder="e.g. Q1 water bill" oninput="uliUpdate(${idx},'description',this.value)">
         <div class="uli-amt-wrap">
+          <span class="uli-dollar">$</span>
           <input type="number" value="${row.amount||''}" placeholder="0.00" step="0.01" min="0" oninput="uliUpdate(${idx},'amount',this.value)">
         </div>
         <button type="button" class="uli-del" onclick="uliRemove(${idx})" title="Remove">
@@ -6914,6 +6936,7 @@ function renderIncUliTable() {
         <input type="date" value="${row.date||''}" onchange="incUliUpdate(${idx},'date',this.value)">
         <input type="text" value="${row.description||''}" placeholder="e.g. January rent" oninput="incUliUpdate(${idx},'description',this.value)">
         <div class="uli-amt-wrap">
+          <span class="uli-dollar">$</span>
           <input type="number" value="${row.amount||''}" placeholder="0.00" step="0.01" min="0" oninput="incUliUpdate(${idx},'amount',this.value)">
         </div>
         <button type="button" class="uli-del" onclick="incUliRemove(${idx})" title="Remove">
