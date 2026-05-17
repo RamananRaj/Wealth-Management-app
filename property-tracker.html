@@ -4398,7 +4398,8 @@ function renderAdmin() {
   // ── User stats ──────────────────────────────────────────────────────────────
   const active = users.filter(u => u.status === 'active').length;
   const admins = users.filter(u => u.role === 'admin').length;
-  const latest = users.length ? [...users].sort((a,b) => b.createdAt.localeCompare(a.createdAt))[0].createdAt : '–';
+  const latestRaw = users.length ? [...users].sort((a,b) => b.createdAt.localeCompare(a.createdAt))[0].createdAt : null;
+  const latest = latestRaw ? new Date(latestRaw).toLocaleDateString('en-AU', { day:'2-digit', month:'short', year:'numeric' }) : '–';
 
   document.getElementById('admin-stat-total').textContent  = users.length;
   document.getElementById('admin-stat-active').textContent = active;
