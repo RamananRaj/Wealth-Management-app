@@ -833,15 +833,16 @@
   .input-prefix-wrapper { position: relative; }
   .input-prefix {
     position: absolute;
-    left: 9px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--gray-500);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 13px;
     pointer-events: none;
+    z-index: 1;
   }
-  .input-prefix-wrapper input { padding-left: 22px; }
+  .input-prefix-wrapper input { padding-left: 26px; }
   .input-suffix-wrapper { position: relative; }
   .input-suffix {
     position: absolute;
@@ -1181,14 +1182,15 @@
   .uli-amt-wrap::before {
     content: '$';
     position: absolute;
-    left: 9px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 13px;
     color: var(--gray-400);
     pointer-events: none;
+    z-index: 1;
   }
-  .uli-amt-wrap input { padding-left: 22px; }
+  .uli-amt-wrap input { padding-left: 26px; }
   .uli-del {
     background: none; border: none; cursor: pointer;
     color: var(--gray-300);
