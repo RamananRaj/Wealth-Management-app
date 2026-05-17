@@ -545,6 +545,24 @@ app.post('/api/admin/set-plan', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────
+// Admin — Restart Server
+// ─────────────────────────────────────────────────────────────────
+app.post('/api/admin/restart', requireAdmin, async (req, res) => {
+  const apiKey    = process.env.RENDER_API_KEY;
+  const serviceId = process.env.RENDER_SERVICE_ID;
+  if (!apiKey || !serviceId) return res.status(500).json({ error: 'Render credentials not configured' });
+
+  const r = await fetch(`https://api.render.com/v1/services/${serviceId}/deploys`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clearCache: 'do_not_clear' }),
+  });
+  const data = await r.json();
+  if (!r.ok) return res.status(500).json({ error: data.message || 'Render API error' });
+  res.json({ success: true, deployId: data.id });
+});
+
+// ─────────────────────────────────────────────────────────────────
 // Admin Stats
 // ─────────────────────────────────────────────────────────────────
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {

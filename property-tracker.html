@@ -2632,7 +2632,10 @@
       <div id="admin-panel-system" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <span class="section-title">System Monitor</span>
-          <button class="btn btn-outline btn-sm" onclick="loadSystemStats()">↻ Refresh</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="loadSystemStats()">↻ Refresh</button>
+            <button class="btn btn-sm" id="restart-btn" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="restartServer()">⟳ Restart Server</button>
+          </div>
         </div>
 
         <!-- Server Status -->
@@ -4261,6 +4264,20 @@ function switchAdminTab(tab) {
   document.getElementById('admin-tab-users').style.borderBottomColor  = tab === 'users'  ? 'var(--primary)' : 'transparent';
   document.getElementById('admin-tab-system').style.borderBottomColor = tab === 'system' ? 'var(--primary)' : 'transparent';
   if (tab === 'system') loadSystemStats();
+}
+
+async function restartServer() {
+  if (!confirm('Restart the server? It will be unavailable for ~30 seconds.')) return;
+  const btn = document.getElementById('restart-btn');
+  btn.textContent = '⟳ Restarting…';
+  btn.disabled = true;
+  try {
+    await apiCall('POST', '/admin/restart');
+    showToast('Server restart triggered — will be back in ~30 seconds.', 'success');
+  } catch(e) {
+    showToast('Restart failed: ' + e.message, 'danger');
+  }
+  setTimeout(() => { btn.textContent = '⟳ Restart Server'; btn.disabled = false; }, 35000);
 }
 
 async function loadSystemStats() {
