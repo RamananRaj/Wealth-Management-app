@@ -2474,161 +2474,202 @@
     <!-- ADMIN PAGE -->
     <div class="page" id="page-admin">
 
-      <!-- Admin Tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--gray-100);padding-bottom:0;">
-        <button id="admin-tab-users" onclick="switchAdminTab('users')" style="padding:8px 18px;border:none;background:none;font-size:14px;font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary);margin-bottom:-2px;cursor:pointer;">👥 Users</button>
-        <button id="admin-tab-system" onclick="switchAdminTab('system')" style="padding:8px 18px;border:none;background:none;font-size:14px;font-weight:600;color:var(--gray-400);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;">🖥️ System</button>
-      </div>
-
-      <!-- Users Tab -->
-      <div id="admin-panel-users">
-      <div class="stats-grid" style="margin-bottom:20px;">
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#0176D3;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Total Users</div>
-            <div class="stat-value" id="admin-stat-total">–</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#2E844A;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Active Users</div>
-            <div class="stat-value" id="admin-stat-active">–</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#DD7A01;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Admin Users</div>
-            <div class="stat-value" id="admin-stat-admins">–</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#06B6D4;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Last Registration</div>
-            <div class="stat-value" style="font-size:16px;" id="admin-stat-latest">–</div>
-          </div>
-        </div>
-      </div>
-      <!-- Platform Property Stats -->
-      <div class="section-header" style="margin-bottom:12px;">
-        <span class="section-title">Platform Activity</span>
-        <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Aggregate figures — no owner data shown</span>
-      </div>
-      <div class="stats-grid" style="margin-bottom:24px;">
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#8B5CF6;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Total Properties</div>
-            <div class="stat-value" id="admin-stat-props">–</div>
-            <div class="stat-sub">Across all user accounts</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#06B6D4;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Avg Properties / User</div>
-            <div class="stat-value" id="admin-stat-props-avg">–</div>
-            <div class="stat-sub">Among registered users</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#2E844A;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Users with Properties</div>
-            <div class="stat-value" id="admin-stat-props-users">–</div>
-            <div class="stat-sub">Have ≥ 1 property logged</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-accent" style="background:#DD7A01;"></div>
-          <div class="stat-card-body">
-            <div class="stat-label">Unregistered Users</div>
-            <div class="stat-value" id="admin-stat-props-empty">–</div>
-            <div class="stat-sub">No properties added yet</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-header" style="margin-bottom:16px;">
-        <span class="section-title">User Management</span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Name</th><th>Email</th><th>Company</th>
-              <th>Role</th><th>Plan</th><th>Status</th><th>Joined</th><th>Properties</th><th>Advisor</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="admin-user-tbody"></tbody>
-        </table>
-      </div>
-
-      <!-- Advisor Invitations -->
-      <div class="section-header" style="margin-top:32px; margin-bottom:16px;">
-        <span class="section-title">Advisor Invitations</span>
-        <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Only invited users can register as Advisors</span>
-      </div>
-      <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:32px;">
-        <div style="padding:18px 20px;border-bottom:1px solid var(--gray-100);">
-          <div class="form-grid" style="margin-bottom:12px;">
-            <div class="form-group">
-              <label>Advisor Name</label>
-              <input type="text" id="inv-name" class="auth-input" placeholder="e.g. John Smith">
-            </div>
-            <div class="form-group">
-              <label>Advisor Email</label>
-              <input type="email" id="inv-email" class="auth-input" placeholder="john@example.com">
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="createInvite()">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-            Generate Invite Code
-          </button>
-        </div>
-        <div id="admin-invite-list"><!-- filled by JS --></div>
-      </div>
-
-      <!-- Broadcast Messages -->
-      <div class="section-header" style="margin-bottom:16px;">
-        <span class="section-title">Broadcast Messages</span>
-        <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Shown as a ribbon on all users' Home hub</span>
-      </div>
-      <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
-        <div class="bcast-compose">
-          <textarea id="bcast-msg-input" placeholder="Type your broadcast message here… e.g. Reserve Bank of Australia has lifted the interest rate by 0.25% for May."></textarea>
-          <div class="bcast-compose-row">
-            <input type="date" id="bcast-date-input" class="bcast-date-input">
-            <button class="btn btn-outline btn-sm" onclick="saveBroadcastDraft()">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Save Draft
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="saveBroadcastAndPost()">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-              Save &amp; Post
-            </button>
-          </div>
-        </div>
-        <div id="admin-broadcast-list"><!-- filled by JS --></div>
-      </div>
-
-      <!-- Blog Management -->
-      <div class="section-header" style="margin-bottom:16px;">
-        <span class="section-title">Blog Posts</span>
-        <button class="btn btn-primary btn-sm" onclick="openBlogModal()">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Post
+      <!-- Admin Platform Tabs -->
+      <div style="display:inline-flex;gap:4px;margin-bottom:28px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:4px;">
+        <button id="admin-tab-users" onclick="switchAdminTab('users')"
+          style="padding:8px 18px;border:none;border-radius:7px;background:white;font-size:12px;font-weight:600;color:var(--gray-700);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.10);transition:all 0.15s;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          User Management
+        </button>
+        <button id="admin-tab-business" onclick="switchAdminTab('business')"
+          style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Business Administration
+        </button>
+        <button id="admin-tab-system" onclick="switchAdminTab('system')"
+          style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          System Admin
         </button>
       </div>
-      <div class="detail-card" style="padding:0; overflow:hidden;">
-        <div id="admin-blog-list"><!-- filled by JS --></div>
-      </div>
+
+      <!-- ── TAB 1: USER MANAGEMENT ── -->
+      <div id="admin-panel-users">
+
+        <!-- User list table -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">All Users</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Manage roles, plans, status and advisor assignment</span>
+        </div>
+        <div class="table-wrap" style="margin-bottom:32px;">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Name</th><th>Email</th><th>Company</th>
+                <th>Role</th><th>Plan</th><th>Status</th><th>Joined</th><th>Properties</th><th>Advisor</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-user-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Advisor Invitations -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Advisor Invitations</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Only invited users can register as Advisors</span>
+        </div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:32px;">
+          <div style="padding:18px 20px;border-bottom:1px solid var(--gray-100);">
+            <div class="form-grid" style="margin-bottom:12px;">
+              <div class="form-group">
+                <label>Advisor Name</label>
+                <input type="text" id="inv-name" class="auth-input" placeholder="e.g. John Smith">
+              </div>
+              <div class="form-group">
+                <label>Advisor Email</label>
+                <input type="email" id="inv-email" class="auth-input" placeholder="john@example.com">
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="createInvite()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+              Generate Invite Code
+            </button>
+          </div>
+          <div id="admin-invite-list"><!-- filled by JS --></div>
+        </div>
+
+        <!-- Recent Signups -->
+        <div class="section-header" style="margin-bottom:12px;">
+          <span class="section-title">Recent Signups</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Latest 5 registrations</span>
+        </div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:var(--gray-50);">
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Name</th>
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Email</th>
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Role</th>
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Joined</th>
+            </tr></thead>
+            <tbody id="sys-recent-users"></tbody>
+          </table>
+        </div>
+
       </div><!-- end admin-panel-users -->
 
-      <!-- System Tab -->
+      <!-- ── TAB 2: BUSINESS ADMINISTRATION ── -->
+      <div id="admin-panel-business" style="display:none;">
+
+        <!-- User KPIs -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">👥 Users</span></div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#0176D3;"></div>
+            <div class="stat-card-body"><div class="stat-label">Total Users</div><div class="stat-value" id="admin-stat-total">–</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#2E844A;"></div>
+            <div class="stat-card-body"><div class="stat-label">Active Users</div><div class="stat-value" id="admin-stat-active">–</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#DD7A01;"></div>
+            <div class="stat-card-body"><div class="stat-label">Advisors</div><div class="stat-value" id="sys-users-advisors">–</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#06B6D4;"></div>
+            <div class="stat-card-body"><div class="stat-label">Last Registration</div><div class="stat-value" style="font-size:16px;" id="admin-stat-latest">–</div></div>
+          </div>
+        </div>
+
+        <!-- Platform Activity / Portfolio -->
+        <div class="section-header" style="margin-bottom:12px;">
+          <span class="section-title" style="font-size:14px;">🏠 Portfolio (Platform-wide)</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Aggregate figures — no individual owner data shown</span>
+        </div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#8B5CF6;"></div>
+            <div class="stat-card-body"><div class="stat-label">Total Properties</div><div class="stat-value" id="admin-stat-props">–</div><div class="stat-sub">Across all accounts</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#2E844A;"></div>
+            <div class="stat-card-body"><div class="stat-label">Total Portfolio Value</div><div class="stat-value" style="font-size:16px;" id="sys-props-value">–</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#DD7A01;"></div>
+            <div class="stat-card-body"><div class="stat-label">Total Loans</div><div class="stat-value" style="font-size:16px;" id="sys-props-loan">–</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#0176D3;"></div>
+            <div class="stat-card-body"><div class="stat-label">Total Equity</div><div class="stat-value" style="font-size:16px;" id="sys-props-equity">–</div></div>
+          </div>
+        </div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#06B6D4;"></div>
+            <div class="stat-card-body"><div class="stat-label">Avg Properties / User</div><div class="stat-value" id="admin-stat-props-avg">–</div><div class="stat-sub">Among registered users</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#2E844A;"></div>
+            <div class="stat-card-body"><div class="stat-label">Users with Properties</div><div class="stat-value" id="admin-stat-props-users">–</div><div class="stat-sub">Have ≥ 1 property logged</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#DD7A01;"></div>
+            <div class="stat-card-body"><div class="stat-label">No Properties Yet</div><div class="stat-value" id="admin-stat-props-empty">–</div><div class="stat-sub">Not started</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#8B5CF6;"></div>
+            <div class="stat-card-body"><div class="stat-label">Paid Plans</div><div class="stat-value" id="sys-users-paid">–</div></div>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">📊 Platform Activity</span></div>
+        <div class="stats-grid" style="margin-bottom:32px;">
+          <div class="stat-card"><div class="stat-card-accent" style="background:#06B6D4;"></div><div class="stat-card-body"><div class="stat-label">Messages</div><div class="stat-value" id="sys-messages">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Income Records</div><div class="stat-value" id="sys-income">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Expense Records</div><div class="stat-value" id="sys-expenses">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Admin Users</div><div class="stat-value" id="admin-stat-admins">–</div></div></div>
+        </div>
+
+        <!-- Broadcast Messages -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Broadcast Messages</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Shown as a ribbon on all users' Home hub</span>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
+          <div class="bcast-compose">
+            <textarea id="bcast-msg-input" placeholder="Type your broadcast message here… e.g. Reserve Bank of Australia has lifted the interest rate by 0.25% for May."></textarea>
+            <div class="bcast-compose-row">
+              <input type="date" id="bcast-date-input" class="bcast-date-input">
+              <button class="btn btn-outline btn-sm" onclick="saveBroadcastDraft()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Draft
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="saveBroadcastAndPost()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                Save &amp; Post
+              </button>
+            </div>
+          </div>
+          <div id="admin-broadcast-list"><!-- filled by JS --></div>
+        </div>
+
+        <!-- Blog Posts -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Blog Posts</span>
+          <button class="btn btn-primary btn-sm" onclick="openBlogModal()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Post
+          </button>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+          <div id="admin-blog-list"><!-- filled by JS --></div>
+        </div>
+
+      </div><!-- end admin-panel-business -->
+
+      <!-- ── TAB 3: SYSTEM ADMIN ── -->
       <div id="admin-panel-system" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <span class="section-title">System Monitor</span>
@@ -2638,8 +2679,8 @@
           </div>
         </div>
 
-        <!-- Server Status -->
-        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🖥️ Server</span></div>
+        <!-- Server Health -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🖥️ Server Health</span></div>
         <div class="stats-grid" style="margin-bottom:24px;">
           <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">API Status</div><div class="stat-value" id="sys-api-status">–</div></div></div>
           <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">DB Ping</div><div class="stat-value" id="sys-db-ping">–</div></div></div>
@@ -2647,40 +2688,15 @@
           <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">Memory (RAM)</div><div class="stat-value" id="sys-memory">–</div></div></div>
         </div>
 
-        <!-- User Stats -->
-        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">👥 Users</span></div>
+        <!-- Live User Snapshot -->
+        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">📡 Live Snapshot</span></div>
         <div class="stats-grid" style="margin-bottom:24px;">
           <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Total Users</div><div class="stat-value" id="sys-users-total">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Active</div><div class="stat-value" id="sys-users-active">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Advisors</div><div class="stat-value" id="sys-users-advisors">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">Paid Plans</div><div class="stat-value" id="sys-users-paid">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Active Users</div><div class="stat-value" id="sys-users-active">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Total Properties</div><div class="stat-value" id="sys-props-total">–</div></div></div>
+          <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">DB Records</div><div class="stat-value" id="sys-db-records">–</div></div></div>
         </div>
 
-        <!-- Portfolio Stats -->
-        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🏠 Portfolio (Platform-wide)</span></div>
-        <div class="stats-grid" style="margin-bottom:24px;">
-          <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Total Properties</div><div class="stat-value" id="sys-props-total">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Total Value</div><div class="stat-value" style="font-size:16px;" id="sys-props-value">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Total Loans</div><div class="stat-value" style="font-size:16px;" id="sys-props-loan">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Total Equity</div><div class="stat-value" style="font-size:16px;" id="sys-props-equity">–</div></div></div>
-        </div>
-
-        <!-- Activity -->
-        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">📊 Activity</span></div>
-        <div class="stats-grid" style="margin-bottom:24px;">
-          <div class="stat-card"><div class="stat-card-accent" style="background:#06B6D4;"></div><div class="stat-card-body"><div class="stat-label">Messages</div><div class="stat-value" id="sys-messages">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#2E844A;"></div><div class="stat-card-body"><div class="stat-label">Income Records</div><div class="stat-value" id="sys-income">–</div></div></div>
-          <div class="stat-card"><div class="stat-card-accent" style="background:#DD7A01;"></div><div class="stat-card-body"><div class="stat-label">Expense Records</div><div class="stat-value" id="sys-expenses">–</div></div></div>
-        </div>
-
-        <!-- Recent Signups -->
-        <div class="section-header" style="margin-bottom:12px;"><span class="section-title" style="font-size:14px;">🆕 Recent Signups</span></div>
-        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-          <table style="width:100%;border-collapse:collapse;">
-            <thead><tr style="background:var(--gray-50);"><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Name</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Email</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Role</th><th style="padding:10px 14px;text-align:left;font-size:12px;color:var(--gray-500);">Joined</th></tr></thead>
-            <tbody id="sys-recent-users"></tbody>
-          </table>
-        </div>
       </div><!-- end admin-panel-system -->
 
     </div>
@@ -4257,13 +4273,23 @@ function showAdvisorClientReport(clientId, fy) {
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 function switchAdminTab(tab) {
-  document.getElementById('admin-panel-users').style.display  = tab === 'users'  ? '' : 'none';
-  document.getElementById('admin-panel-system').style.display = tab === 'system' ? '' : 'none';
-  document.getElementById('admin-tab-users').style.color        = tab === 'users'  ? 'var(--primary)' : 'var(--gray-400)';
-  document.getElementById('admin-tab-system').style.color       = tab === 'system' ? 'var(--primary)' : 'var(--gray-400)';
-  document.getElementById('admin-tab-users').style.borderBottomColor  = tab === 'users'  ? 'var(--primary)' : 'transparent';
-  document.getElementById('admin-tab-system').style.borderBottomColor = tab === 'system' ? 'var(--primary)' : 'transparent';
-  if (tab === 'system') loadSystemStats();
+  ['users','business','system'].forEach(t => {
+    const panel = document.getElementById('admin-panel-' + t);
+    const btn   = document.getElementById('admin-tab-' + t);
+    if (panel) panel.style.display = (t === tab) ? '' : 'none';
+    if (btn) {
+      if (t === tab) {
+        btn.style.background  = 'white';
+        btn.style.color       = 'var(--gray-800)';
+        btn.style.boxShadow   = '0 1px 3px rgba(0,0,0,0.10)';
+      } else {
+        btn.style.background  = 'transparent';
+        btn.style.color       = 'var(--gray-400)';
+        btn.style.boxShadow   = 'none';
+      }
+    }
+  });
+  if (tab === 'system' || tab === 'business') loadSystemStats();
 }
 
 async function restartServer() {
@@ -4313,6 +4339,11 @@ async function loadSystemStats() {
     document.getElementById('sys-messages').textContent = data.activity.messages;
     document.getElementById('sys-income').textContent   = data.activity.incomeRecords;
     document.getElementById('sys-expenses').textContent = data.activity.expenseRecords;
+
+    // DB Records snapshot (sum of all records)
+    const dbRec = (data.properties.total||0) + (data.activity.messages||0) + (data.activity.incomeRecords||0) + (data.activity.expenseRecords||0);
+    const el = document.getElementById('sys-db-records');
+    if (el) el.textContent = dbRec;
 
     // Recent users
     const tbody = document.getElementById('sys-recent-users');
@@ -4821,7 +4852,7 @@ function saveData() {
 
 // ── NAVIGATION ──────────────────────────────────────────────────────────────
 const pageTitles    = { hub: 'Home', dashboard: 'Property Management', properties: 'Properties', detail: 'Property Detail', reports: 'Tax & Reports', propmanagement: 'Tenancy Management', admin: 'Admin', clients: 'My Clients', settings: 'Settings', blog: 'News & Updates', blogpost: 'News & Updates' };
-const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'All Properties', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'User Management', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights' };
+const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'All Properties', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'Administration Platform', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights' };
 
 function showPage(name) {
   // Stop ribbon carousel when leaving the hub
