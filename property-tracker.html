@@ -1512,6 +1512,9 @@
   .cat-gas          { background: #FFF3CD; color: #7D4E00; }
   .cat-garden       { background: #E6F4E6; color: #1A5C1A; }
   .cat-interest     { background: #F0EDFF; color: #4A2E99; }
+  .cat-legal        { background: #FFF0F0; color: #9B1C1C; }
+  .cat-rates        { background: #FFF7E6; color: #7D4E00; }
+  .cat-strata       { background: #E8F4F8; color: #1A5276; }
   .cat-other        { background: var(--gray-100); color: var(--gray-600); }
   .expense-log-footer {
     padding: 12px 20px;
@@ -2018,6 +2021,9 @@
   .cat-gas          { background: #FFF3CD; color: #7D4E00; border: 1px solid #FFCC66; }
   .cat-garden       { background: #E6F4E6; color: #1A5C1A; border: 1px solid #88C988; }
   .cat-interest     { background: #F0EDFF; color: #4A2E99; border: 1px solid #C4B5FD; }
+  .cat-legal        { background: #FFF0F0; color: #9B1C1C; border: 1px solid #FECACA; }
+  .cat-rates        { background: #FFF7E6; color: #7D4E00; border: 1px solid #F5C78E; }
+  .cat-strata       { background: #E8F4F8; color: #1A5276; border: 1px solid #AED6F1; }
   .cat-other        { background: #F3F3F3; color: var(--gray-600); border: 1px solid var(--gray-200); }
   .expense-log-footer {
     padding: 10px 16px;
@@ -3406,7 +3412,7 @@
             <option value="maintenance">Maintenance</option>
             <option value="gas">Gas &amp; Electricity</option>
             <option value="garden">Garden Maintenance</option>
-            <option value="interest">Interest</option>
+            <option value="interest">Interest on Loans</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -5384,9 +5390,9 @@ function showDetail(id) {
           if (lineItems.length === 0) {
             // Fallback to stored summary values
             const expFields = [
-              { key:'rates', label:'Council Rates' },{ key:'insurance', label:'Insurance' },
-              { key:'mgmt', label:'Property Management' },{ key:'maintenance', label:'Maintenance' },
-              { key:'strata', label:'Body Corporate' },{ key:'water', label:'Water Rates' },
+              { key:'rates', label:'Rates and Taxes' },{ key:'insurance', label:'Insurance' },
+              { key:'mgmt', label:'Property Management' },{ key:'maintenance', label:'Repairs and Maintenance' },
+              { key:'strata', label:'Body Corporate' },{ key:'water', label:'Rates and Taxes' },
             ];
             return expFields.map(f => +p[f.key]
               ? `<div class="detail-row"><span class="detail-row-label">${f.label}</span><span class="detail-row-value">${fmt(p[f.key])}</span></div>`
@@ -5470,7 +5476,7 @@ function showDetail(id) {
             <option value="maintenance">Maintenance</option>
             <option value="gas">Gas &amp; Electricity</option>
             <option value="garden">Garden Maintenance</option>
-            <option value="interest">Interest</option>
+            <option value="interest">Interest on Loans</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -5549,7 +5555,7 @@ function renderPropManagement() {
 
   // ── Maintenance log (maintenance + repairs from daily expense log) ──
   const maintTbody = document.getElementById('pm-maintenance-tbody');
-  const maintCats  = new Set(['maintenance','repairs','garden']);
+  const maintCats  = new Set(['maintenance','repairs','garden','legal']);
   let maintRows = [];
 
   properties.forEach(p => {
@@ -5833,7 +5839,7 @@ function renderTaxReport() {
       </table>`;};
 
   // ── 2. EXPENSE BREAKDOWN ───────────────────────────────────────────────────
-  const CAT_ORDER = ['rates','insurance','mgmt','maintenance','strata','water','gas','garden','interest','repairs','utilities','management','other'];
+  const CAT_ORDER = ['rates','water','maintenance','garden','repairs','insurance','mgmt','management','strata','gas','interest','legal','utilities','other'];
   const allCats   = new Set();
   const propExpMap = {};
 
@@ -6724,15 +6730,14 @@ function showToast(msg, type = '') {
 // ── UNIFIED ANNUAL EXPENSE LINE ITEMS ─────────────────────────────────────────
 const EXP_CAT_OPTIONS = [
   { value: 'strata',      label: 'Body Corporate' },
-  { value: 'rates',       label: 'Council Rates' },
-  { value: 'garden',      label: 'Garden Maintenance' },
   { value: 'gas',         label: 'Gas & Electricity' },
   { value: 'insurance',   label: 'Insurance' },
-  { value: 'interest',    label: 'Interest' },
-  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'interest',    label: 'Interest on Loans' },
+  { value: 'legal',       label: 'Legal Expenses' },
   { value: 'other',       label: 'Other' },
   { value: 'mgmt',        label: 'Property Management' },
-  { value: 'water',       label: 'Water Rates' },
+  { value: 'rates',       label: 'Rates and Taxes' },
+  { value: 'maintenance', label: 'Repairs and Maintenance' },
 ];
 
 const EXP_CAT_MAP = Object.fromEntries(EXP_CAT_OPTIONS.map(o => [o.value, o.label]));
@@ -7008,15 +7013,21 @@ function renderIncUliSummary() {
 
 // ── EXPENSE LOG ───────────────────────────────────────────────────────────────
 const EXPENSE_CATS = {
-  repairs:     { label: 'Repairs',           cls: 'cat-repairs' },
-  utilities:   { label: 'Utilities',         cls: 'cat-utilities' },
-  management:  { label: 'Management',        cls: 'cat-management' },
-  insurance:   { label: 'Insurance',         cls: 'cat-insurance' },
-  maintenance: { label: 'Maintenance',       cls: 'cat-maintenance' },
-  gas:         { label: 'Gas & Electricity', cls: 'cat-gas' },
-  garden:      { label: 'Garden Maintenance',cls: 'cat-garden' },
-  interest:    { label: 'Interest',          cls: 'cat-interest' },
-  other:       { label: 'Other',             cls: 'cat-other' },
+  strata:      { label: 'Body Corporate',        cls: 'cat-strata' },
+  gas:         { label: 'Gas & Electricity',     cls: 'cat-gas' },
+  insurance:   { label: 'Insurance',             cls: 'cat-insurance' },
+  interest:    { label: 'Interest on Loans',     cls: 'cat-interest' },
+  legal:       { label: 'Legal Expenses',        cls: 'cat-legal' },
+  other:       { label: 'Other',                 cls: 'cat-other' },
+  mgmt:        { label: 'Property Management',   cls: 'cat-management' },
+  rates:       { label: 'Rates and Taxes',       cls: 'cat-rates' },
+  maintenance: { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
+  // Legacy values — kept for backward compat with existing records
+  repairs:     { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
+  utilities:   { label: 'Utilities',             cls: 'cat-utilities' },
+  management:  { label: 'Property Management',   cls: 'cat-management' },
+  garden:      { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
+  water:       { label: 'Rates and Taxes',       cls: 'cat-rates' },
 };
 
 // ── INCOME LOG ────────────────────────────────────────────────────────────────
