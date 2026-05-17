@@ -132,12 +132,26 @@ create table if not exists blog_posts (
   created_at timestamptz default now()
 );
 
+-- Platform Categories (expense and income categories managed by admin)
+create table if not exists platform_categories (
+  id          text primary key,
+  kind        text not null,   -- 'expense' or 'income'
+  value       text not null,   -- code stored in records (e.g. 'rates', 'strata')
+  label       text not null,   -- display label shown to users
+  cls         text,            -- CSS badge class (e.g. 'cat-rates')
+  active_from text,            -- FY string e.g. '2024-2025' (null = from the beginning)
+  active_to   text,            -- FY string e.g. '2025-2026' (null = currently active)
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
 -- Disable Row Level Security (we use service_role key from backend — backend enforces auth)
-alter table users       disable row level security;
-alter table properties  disable row level security;
-alter table income_log  disable row level security;
-alter table expenses    disable row level security;
-alter table messages    disable row level security;
-alter table broadcasts  disable row level security;
-alter table invites     disable row level security;
-alter table blog_posts  disable row level security;
+alter table users                disable row level security;
+alter table properties           disable row level security;
+alter table income_log           disable row level security;
+alter table expenses             disable row level security;
+alter table messages             disable row level security;
+alter table broadcasts           disable row level security;
+alter table invites              disable row level security;
+alter table blog_posts           disable row level security;
+alter table platform_categories  disable row level security;

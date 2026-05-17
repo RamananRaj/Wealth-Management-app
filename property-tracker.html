@@ -1120,6 +1120,7 @@
     font-size: 13px;
     color: var(--gray-700);
     border-bottom: 1px solid var(--gray-100);
+    white-space: nowrap;
   }
   tbody tr:nth-child(even) { background: #FAFAFA; }
   tbody tr:last-child td { border-bottom: none; }
@@ -2695,8 +2696,28 @@
             New Post
           </button>
         </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
           <div id="admin-blog-list"><!-- filled by JS --></div>
+        </div>
+
+        <!-- Category Management -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Category Management</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Manage expense and income categories across financial years</span>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="display:inline-flex;gap:4px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:4px;">
+              <button id="cat-tab-btn-expense" onclick="switchCatTab('expense')" style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:white;color:var(--gray-800);box-shadow:0 1px 3px rgba(0,0,0,0.10);transition:all .12s;">Expense Categories</button>
+              <button id="cat-tab-btn-income"  onclick="switchCatTab('income')"  style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:transparent;color:var(--gray-400);box-shadow:none;transition:all .12s;">Income Types</button>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openAddCategoryModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Category
+            </button>
+          </div>
+          <div id="cat-panel-expense" style="padding:0;"><!-- filled by JS --></div>
+          <div id="cat-panel-income"  style="display:none; padding:0;"><!-- filled by JS --></div>
         </div>
 
       </div><!-- end admin-panel-business -->
@@ -3328,6 +3349,59 @@
   </div>
 </div>
 
+<!-- ADD / EDIT CATEGORY MODAL (admin only) -->
+<div class="modal-overlay" id="cat-modal-overlay" onclick="if(event.target===this)closeCategoryModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="cat-modal-title">Add Category</h3>
+      <button class="modal-close" onclick="closeCategoryModal()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cat-modal-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div class="form-group" style="margin:0;">
+          <label>Type *</label>
+          <select id="cat-modal-kind" style="width:100%;">
+            <option value="expense">Expense Category</option>
+            <option value="income">Income Type</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Code (value key) *
+            <span style="font-size:10px;color:var(--gray-400);font-weight:400;">stored in records</span>
+          </label>
+          <input type="text" id="cat-modal-value" placeholder="e.g. council_levy" style="width:100%;">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Display Label *</label>
+        <input type="text" id="cat-modal-label" placeholder="e.g. Council Levy" style="width:100%;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div class="form-group" style="margin:0;">
+          <label>Active From FY
+            <span style="font-size:10px;color:var(--gray-400);font-weight:400;">e.g. 2025-2026</span>
+          </label>
+          <input type="text" id="cat-modal-from" placeholder="2025-2026" style="width:100%;">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Retire After FY
+            <span style="font-size:10px;color:var(--gray-400);font-weight:400;">leave blank = ongoing</span>
+          </label>
+          <input type="text" id="cat-modal-to" placeholder="e.g. 2025-2026" style="width:100%;">
+        </div>
+      </div>
+      <div id="cat-modal-error" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeCategoryModal()">Cancel</button>
+      <button class="btn btn-primary" id="cat-modal-save-btn" onclick="saveCategoryModal()">Save Category</button>
+    </div>
+  </div>
+</div>
+
 <!-- BLOG POST MODAL (admin only) -->
 <div class="modal-overlay" id="blog-modal-overlay" onclick="if(event.target===this)closeBlogModal()">
   <div class="modal" style="max-width:600px;">
@@ -3704,6 +3778,9 @@ function initApp() {
   // Sync plan from Stripe server (non-blocking)
   checkStripeBackend().then(() => syncPlanFromServer(session.id));
 
+  // Merge platform categories from server (non-blocking — falls back to hardcoded registry)
+  loadPlatformCategories();
+
   // Handle return from Stripe Checkout
   handleStripeReturn();
 
@@ -3719,6 +3796,31 @@ function initApp() {
 
 function showUserMenu() {
   // Placeholder — could open a dropdown in future
+}
+
+// ── PLATFORM CATEGORIES — load from server and merge into registries ──────────
+async function loadPlatformCategories() {
+  try {
+    // API_BASE ends with /api, so strip it to get origin, then call /api/categories
+    const res = await fetch(API_BASE.replace(/\/api$/, '') + '/api/categories');
+    if (!res.ok) return;
+    const cats = await res.json();
+    cats.forEach(c => {
+      const entry = {
+        label:      c.label,
+        cls:        c.cls || 'cat-other',
+        ...(c.activeFrom ? { activeFrom: c.activeFrom } : {}),
+        ...(c.activeTo   ? { activeTo:   c.activeTo   } : {}),
+      };
+      if (c.kind === 'expense') {
+        EXPENSE_CAT_REGISTRY[c.value] = entry;
+      } else if (c.kind === 'income') {
+        INCOME_TYPE_REGISTRY[c.value] = entry;
+      }
+    });
+  } catch (e) {
+    // Silently fall back to hardcoded registry
+  }
 }
 
 // ── INVITES ───────────────────────────────────────────────────────────────────
@@ -4322,6 +4424,7 @@ function switchAdminTab(tab) {
     }
   });
   if (tab === 'system' || tab === 'business') loadSystemStats();
+  if (tab === 'business') loadAdminCategories();
 }
 
 async function restartServer() {
@@ -4336,6 +4439,209 @@ async function restartServer() {
     showToast('Restart failed: ' + e.message, 'danger');
   }
   setTimeout(() => { btn.textContent = '⟳ Restart Server'; btn.disabled = false; }, 35000);
+}
+
+// ── CATEGORY MANAGEMENT ──────────────────────────────────────────────────────
+
+let _catCurrentTab = 'expense'; // track which sub-tab is active
+let _catStore = {}; // id → category object, for safe edit access
+
+function switchCatTab(kind) {
+  _catCurrentTab = kind;
+  ['expense','income'].forEach(k => {
+    const panel = document.getElementById('cat-panel-' + k);
+    const btn   = document.getElementById('cat-tab-btn-' + k);
+    if (panel) panel.style.display = k === kind ? '' : 'none';
+    if (btn) {
+      if (k === kind) {
+        btn.style.background = 'white';
+        btn.style.color      = 'var(--gray-800)';
+        btn.style.boxShadow  = '0 1px 3px rgba(0,0,0,0.10)';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.color      = 'var(--gray-400)';
+        btn.style.boxShadow  = 'none';
+      }
+    }
+  });
+}
+
+async function loadAdminCategories() {
+  ['expense','income'].forEach(k => {
+    const el = document.getElementById('cat-panel-' + k);
+    if (el) el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">Loading…</div>`;
+  });
+  try {
+    const cats = await apiCall('GET', '/categories');
+    _catStore = {};
+    cats.forEach(c => { if (c.id) _catStore[c.id] = c; });
+    renderCategoryPanel('expense', cats.filter(c => c.kind === 'expense'));
+    renderCategoryPanel('income',  cats.filter(c => c.kind === 'income'));
+  } catch(e) {
+    // Fall back to displaying the hardcoded registry
+    const fromRegistry = (registry, kind) => Object.entries(registry).map(([value, v]) => ({
+      id: null, kind, value, label: v.label, cls: v.cls, activeFrom: v.activeFrom, activeTo: v.activeTo, _local: true,
+    }));
+    renderCategoryPanel('expense', fromRegistry(EXPENSE_CAT_REGISTRY, 'expense'));
+    renderCategoryPanel('income',  fromRegistry(INCOME_TYPE_REGISTRY, 'income'));
+  }
+}
+
+function renderCategoryPanel(kind, cats) {
+  const el = document.getElementById('cat-panel-' + kind);
+  if (!el) return;
+
+  if (!cats.length) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">No ${kind} categories yet. Click <strong>Add Category</strong> to create one.</div>`;
+    return;
+  }
+
+  // Sort: active first (no activeTo), then retired (has activeTo), alpha within each group
+  const active  = cats.filter(c => !c.activeTo).sort((a,b) => a.label.localeCompare(b.label));
+  const retired = cats.filter(c =>  c.activeTo).sort((a,b) => a.label.localeCompare(b.label));
+  const sorted  = [...active, ...retired];
+
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:var(--gray-50);">
+          <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Label</th>
+          <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Code</th>
+          <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Active From</th>
+          <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Retire After</th>
+          <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Status</th>
+          <th style="padding:9px 16px;border-bottom:1px solid var(--gray-200);"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map((c, i) => {
+          const isRetired = !!c.activeTo;
+          const statusBadge = isRetired
+            ? `<span style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">Retired</span>`
+            : `<span style="background:var(--success-light);color:var(--success);border:1px solid #BBF7D0;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">Active</span>`;
+          const actions = c._local ? `<span style="font-size:11px;color:var(--gray-400);">Built-in</span>` : `
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c.id}')">Edit</button>
+              ${!isRetired ? `<button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECADA;" onclick="retireCategory('${c.id}')">Retire</button>` : ''}
+              <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECADA;" onclick="deleteCategory('${c.id}')">Delete</button>
+            </div>`;
+          return `<tr style="border-bottom:1px solid var(--gray-100);${isRetired?'opacity:.6;':''}">
+            <td style="padding:10px 16px;font-size:13px;font-weight:500;color:var(--gray-800);">${c.label}</td>
+            <td style="padding:10px 16px;"><code style="font-size:11px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:4px;padding:2px 6px;color:var(--gray-600);">${c.value}</code></td>
+            <td style="padding:10px 16px;font-size:12px;color:var(--gray-600);">${c.activeFrom ? 'FY ' + c.activeFrom.replace('-','–') : '–'}</td>
+            <td style="padding:10px 16px;font-size:12px;color:var(--gray-600);">${c.activeTo   ? 'FY ' + c.activeTo.replace('-','–')   : '–'}</td>
+            <td style="padding:10px 16px;">${statusBadge}</td>
+            <td style="padding:10px 16px;white-space:nowrap;">${actions}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openAddCategoryModal() {
+  document.getElementById('cat-modal-id').value    = '';
+  document.getElementById('cat-modal-title').textContent = 'Add Category';
+  document.getElementById('cat-modal-kind').value  = _catCurrentTab;
+  document.getElementById('cat-modal-kind').disabled = false;
+  document.getElementById('cat-modal-value').value = '';
+  document.getElementById('cat-modal-value').readOnly = false;
+  document.getElementById('cat-modal-label').value = '';
+  document.getElementById('cat-modal-from').value  = currentFY();
+  document.getElementById('cat-modal-to').value    = '';
+  document.getElementById('cat-modal-error').style.display = 'none';
+  document.getElementById('cat-modal-save-btn').textContent = 'Save Category';
+  document.getElementById('cat-modal-overlay').classList.add('open');
+}
+
+function openEditCategoryModal(id) {
+  const cat = _catStore[id];
+  if (!cat) return;
+  document.getElementById('cat-modal-id').value    = cat.id;
+  document.getElementById('cat-modal-title').textContent = 'Edit Category';
+  document.getElementById('cat-modal-kind').value  = cat.kind;
+  document.getElementById('cat-modal-kind').disabled = true;
+  document.getElementById('cat-modal-value').value = cat.value;
+  document.getElementById('cat-modal-value').readOnly = true;
+  document.getElementById('cat-modal-label').value = cat.label;
+  document.getElementById('cat-modal-from').value  = cat.activeFrom || '';
+  document.getElementById('cat-modal-to').value    = cat.activeTo   || '';
+  document.getElementById('cat-modal-error').style.display = 'none';
+  document.getElementById('cat-modal-save-btn').textContent = 'Update Category';
+  document.getElementById('cat-modal-overlay').classList.add('open');
+}
+
+function closeCategoryModal() {
+  document.getElementById('cat-modal-overlay').classList.remove('open');
+}
+
+async function saveCategoryModal() {
+  const id        = document.getElementById('cat-modal-id').value.trim();
+  const kind      = document.getElementById('cat-modal-kind').value;
+  const value     = document.getElementById('cat-modal-value').value.trim();
+  const label     = document.getElementById('cat-modal-label').value.trim();
+  const activeFrom = document.getElementById('cat-modal-from').value.trim();
+  const activeTo   = document.getElementById('cat-modal-to').value.trim();
+  const errEl = document.getElementById('cat-modal-error');
+
+  if (!label) { errEl.textContent = 'Display label is required.'; errEl.style.display=''; return; }
+  if (!id && !value) { errEl.textContent = 'Code (value key) is required.'; errEl.style.display=''; return; }
+
+  // Validate FY format if provided (YYYY-YYYY)
+  const fyRe = /^\d{4}-\d{4}$/;
+  if (activeFrom && !fyRe.test(activeFrom)) { errEl.textContent = 'Active From must be in YYYY-YYYY format, e.g. 2025-2026.'; errEl.style.display=''; return; }
+  if (activeTo   && !fyRe.test(activeTo))   { errEl.textContent = 'Retire After must be in YYYY-YYYY format, e.g. 2025-2026.'; errEl.style.display=''; return; }
+
+  errEl.style.display = 'none';
+  const btn = document.getElementById('cat-modal-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    if (id) {
+      // Edit existing
+      await apiCall('PATCH', `/categories/${id}`, { label, activeFrom: activeFrom||null, activeTo: activeTo||null });
+      await loadPlatformCategories(); // re-fetch to sync local registries
+      showToast('Category updated.', 'success');
+    } else {
+      // Create new
+      await apiCall('POST', '/categories', { kind, value, label, activeFrom: activeFrom||null, activeTo: activeTo||null });
+      // Merge into local registry immediately
+      const entry = { label, cls: 'cat-' + value.replace(/_/g,'-'), ...(activeFrom?{activeFrom}:{}), ...(activeTo?{activeTo}:{}) };
+      if (kind === 'expense') EXPENSE_CAT_REGISTRY[value] = entry;
+      else                    INCOME_TYPE_REGISTRY[value]  = entry;
+      showToast('Category added.', 'success');
+    }
+    closeCategoryModal();
+    loadAdminCategories();
+  } catch(e) {
+    errEl.textContent = e.message || 'Save failed.';
+    errEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = id ? 'Update Category' : 'Save Category';
+  }
+}
+
+async function retireCategory(id) {
+  if (!confirm('Retire this category? It will no longer appear in dropdowns, but existing records will still display correctly.')) return;
+  try {
+    await apiCall('PATCH', `/categories/${id}`, { activeTo: currentFY() });
+    showToast('Category retired for current FY onwards.', 'success');
+    loadAdminCategories();
+    await loadPlatformCategories(); // refresh local registry
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'danger');
+  }
+}
+
+async function deleteCategory(id) {
+  if (!confirm('Permanently delete this category? Only do this if no records have used it.')) return;
+  try {
+    await apiCall('DELETE', `/categories/${id}`);
+    showToast('Category deleted.', 'success');
+    loadAdminCategories();
+    await loadPlatformCategories();
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'danger');
+  }
 }
 
 async function loadSystemStats() {
@@ -5691,7 +5997,7 @@ function buildFYOptions(selectId, onchangeExpr, selectedFY) {
   const curr      = selectedFY || currentFY();
   const currStart = parseInt(currentFY().split('-')[0]);
   const years     = [];
-  for (let y = currStart; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
+  for (let y = currStart + 1; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
   return `<select id="${selectId}" onchange="${onchangeExpr}" style="padding:3px 8px;font-size:12px;font-family:inherit;border:1px solid var(--gray-300);border-radius:var(--radius);height:28px;background:white;color:var(--gray-800);cursor:pointer;">
     ${years.map(y => `<option value="${y}"${y === curr ? ' selected' : ''}>FY ${y.replace('-', '–')}</option>`).join('')}
   </select>`;
@@ -5704,16 +6010,16 @@ function buildTaxYearOptions() {
   const curr      = currentFY();
   const currStart = parseInt(curr.split('-')[0]);
   const years     = [];
-  for (let y = currStart; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
+  for (let y = currStart + 1; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
   sel.innerHTML = years.map(fy =>
     `<option value="${fy}"${(saved ? saved === fy : fy === curr) ? ' selected' : ''}>FY ${fy.replace('-', '–')}</option>`
   ).join('');
 }
 
 function getAllCategoryLabels() {
+  // Returns all known category values → labels (including legacy ones)
   const map = {};
-  EXP_CAT_OPTIONS.forEach(o => { map[o.value] = o.label; });
-  Object.entries(EXPENSE_CATS).forEach(([k, v]) => { if (!map[k]) map[k] = v.label; });
+  Object.entries(EXPENSE_CAT_REGISTRY).forEach(([k, v]) => { map[k] = v.label; });
   return map;
 }
 
@@ -6729,19 +7035,54 @@ function showToast(msg, type = '') {
 }
 
 // ── UNIFIED ANNUAL EXPENSE LINE ITEMS ─────────────────────────────────────────
-const EXP_CAT_OPTIONS = [
-  { value: 'strata',      label: 'Body Corporate' },
-  { value: 'gas',         label: 'Gas & Electricity' },
-  { value: 'insurance',   label: 'Insurance' },
-  { value: 'interest',    label: 'Interest on Loans' },
-  { value: 'legal',       label: 'Legal Expenses' },
-  { value: 'other',       label: 'Other' },
-  { value: 'mgmt',        label: 'Property Management' },
-  { value: 'rates',       label: 'Rates and Taxes' },
-  { value: 'maintenance', label: 'Repairs and Maintenance' },
-];
 
-const EXP_CAT_MAP = Object.fromEntries(EXP_CAT_OPTIONS.map(o => [o.value, o.label]));
+// EXPENSE CATEGORY REGISTRY — APPEND-ONLY.
+// Never delete or rename an existing entry. Historical records look up their stored value
+// here to get the correct label for the FY in which they were entered.
+// To introduce a new/renamed category for a future FY: add a NEW key with `activeFrom` set.
+// To retire a category: set `activeTo` — it disappears from dropdowns but still renders
+// correctly on old records.
+const EXPENSE_CAT_REGISTRY = {
+  // ── Active from FY 2024-2025 ──────────────────────────────────────────────
+  strata:      { label: 'Body Corporate',           cls: 'cat-strata',      activeFrom: '2024-2025' },
+  gas:         { label: 'Gas & Electricity',         cls: 'cat-gas',         activeFrom: '2024-2025' },
+  insurance:   { label: 'Insurance',                 cls: 'cat-insurance',   activeFrom: '2024-2025' },
+  interest:    { label: 'Interest on Loans',          cls: 'cat-interest',    activeFrom: '2024-2025' },
+  legal:       { label: 'Legal Expenses',             cls: 'cat-legal',       activeFrom: '2024-2025' },
+  other:       { label: 'Other',                     cls: 'cat-other',       activeFrom: '2024-2025' },
+  mgmt:        { label: 'Property Management',       cls: 'cat-management',  activeFrom: '2024-2025' },
+  rates:       { label: 'Rates and Taxes',           cls: 'cat-rates',       activeFrom: '2024-2025' },
+  maintenance: { label: 'Repairs and Maintenance',   cls: 'cat-maintenance', activeFrom: '2024-2025' },
+  // ── Legacy (pre-2024-25) — display only, not shown in dropdowns ───────────
+  council:     { label: 'Council Rates',             cls: 'cat-rates',       activeTo: '2023-2024' },
+  water:       { label: 'Water Rates',               cls: 'cat-rates',       activeTo: '2023-2024' },
+  garden:      { label: 'Garden Maintenance',        cls: 'cat-maintenance', activeTo: '2023-2024' },
+  repairs:     { label: 'Repairs',                   cls: 'cat-maintenance', activeTo: '2023-2024' },
+  utilities:   { label: 'Utilities',                 cls: 'cat-utilities',   activeTo: '2023-2024' },
+  management:  { label: 'Property Management',       cls: 'cat-management',  activeTo: '2023-2024' },
+};
+
+// Returns the active categories for a given FY string (e.g. '2025-2026') — used for dropdowns.
+function getExpenseCatsForFY(fy) {
+  if (!fy) fy = currentFY();
+  return Object.entries(EXPENSE_CAT_REGISTRY)
+    .filter(([, v]) => {
+      if (v.activeTo   && fy > v.activeTo)   return false;
+      if (v.activeFrom && fy < v.activeFrom) return false;
+      return true;
+    })
+    .map(([value, v]) => ({ value, label: v.label, cls: v.cls }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// Looks up display info for any stored category value — always resolves, even retired ones.
+function lookupExpenseCat(value) {
+  return EXPENSE_CAT_REGISTRY[value] || EXPENSE_CAT_REGISTRY.other;
+}
+
+// Backward-compat aliases
+const EXP_CAT_OPTIONS = getExpenseCatsForFY(currentFY());
+const EXP_CAT_MAP     = Object.fromEntries(EXP_CAT_OPTIONS.map(o => [o.value, o.label]));
 
 // Flat array of line items in memory while modal is open
 let _uliRows = [];   // [{ id, category, date, description, amount }]
@@ -6772,7 +7113,7 @@ function populateUliFYFilter() {
   const curr      = currentFY();
   const currStart = parseInt(curr.split('-')[0]);
   const years     = [];
-  for (let y = currStart; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
+  for (let y = currStart + 1; y >= currStart - 4; y--) years.push(`${y}-${y + 1}`);
   sel.innerHTML = `<option value="">All Years</option>` +
     years.map(fy =>
       `<option value="${fy}"${(saved ? saved === fy : fy === curr) ? ' selected' : ''}>FY ${fy.replace('-', '–')}</option>`
@@ -6815,7 +7156,7 @@ function renderUliTable() {
       const idx = _uliRows.indexOf(row);
       return `<div class="uli-row">
         <select onchange="uliUpdate(${idx},'category',this.value)">
-          ${EXP_CAT_OPTIONS.map(o => `<option value="${o.value}"${row.category===o.value?' selected':''}>${o.label}</option>`).join('')}
+          ${getExpenseCatsForFY(fy || currentFY()).map(o => `<option value="${o.value}"${row.category===o.value?' selected':''}>${o.label}</option>`).join('')}
         </select>
         <input type="date" value="${row.date||''}" onchange="uliUpdate(${idx},'date',this.value)">
         <input type="text" value="${row.description||''}" placeholder="e.g. Q1 water bill" oninput="uliUpdate(${idx},'description',this.value)">
@@ -6907,12 +7248,40 @@ function persistLiItems(propertyId) {
   saveIncomeLog(propertyId, cleanInc);
 }
 
+// ── INCOME TYPE REGISTRY ──────────────────────────────────────────────────────
+// APPEND-ONLY: Never delete or rename an existing entry. Historical records look up their
+// stored value here to get the correct label for the FY in which they were entered.
+// To introduce a new/renamed type for a future FY: add a NEW key with `activeFrom` set.
+// To retire a type: set `activeTo` — it disappears from dropdowns but still renders
+// correctly on old records.
+const INCOME_TYPE_REGISTRY = {
+  // ── Active from FY 2024-2025 ──────────────────────────────────────────────
+  rent:  { label: 'Rent Received',  cls: 'cat-insurance',  activeFrom: '2024-2025' },
+  bond:  { label: 'Bond / Deposit', cls: 'cat-management', activeFrom: '2024-2025' },
+  other: { label: 'Other Income',   cls: 'cat-other',      activeFrom: '2024-2025' },
+  // ── Legacy values (add here as needed when retiring or renaming) ──────────
+};
+
+// Returns the active income types for a given FY string — used for dropdowns.
+function getIncomeTypesForFY(fy) {
+  if (!fy) fy = currentFY();
+  return Object.entries(INCOME_TYPE_REGISTRY)
+    .filter(([, v]) => {
+      if (v.activeTo   && fy > v.activeTo)   return false;
+      if (v.activeFrom && fy < v.activeFrom) return false;
+      return true;
+    })
+    .map(([value, v]) => ({ value, label: v.label, cls: v.cls }));
+}
+
+// Looks up display info for any stored income type value — always resolves, even retired ones.
+function lookupIncomeType(value) {
+  return INCOME_TYPE_REGISTRY[value] || INCOME_TYPE_REGISTRY.other;
+}
+
 // ── INCOME LINE ITEMS (modal) ─────────────────────────────────────────────────
-const INC_TYPE_OPTIONS = [
-  { value: 'rent',  label: 'Rent Received' },
-  { value: 'bond',  label: 'Bond / Deposit' },
-  { value: 'other', label: 'Other Income' },
-];
+// INC_TYPE_OPTIONS is a backward-compat alias — dropdowns now call getIncomeTypesForFY(fy)
+const INC_TYPE_OPTIONS = getIncomeTypesForFY(currentFY());
 
 function filterIncRows(rows) {
   const fy = getUliFYFilter();   // reuse shared FY helper
@@ -6937,7 +7306,7 @@ function renderIncUliTable() {
       const idx = _incRows.indexOf(row);
       return `<div class="uli-row">
         <select onchange="incUliUpdate(${idx},'type',this.value)">
-          ${INC_TYPE_OPTIONS.map(o => `<option value="${o.value}"${row.type===o.value?' selected':''}>${o.label}</option>`).join('')}
+          ${getIncomeTypesForFY(fy || currentFY()).map(o => `<option value="${o.value}"${row.type===o.value?' selected':''}>${o.label}</option>`).join('')}
         </select>
         <input type="date" value="${row.date||''}" onchange="incUliUpdate(${idx},'date',this.value)">
         <input type="text" value="${row.description||''}" placeholder="e.g. January rent" oninput="incUliUpdate(${idx},'description',this.value)">
@@ -6990,7 +7359,7 @@ function renderIncUliSummary() {
   });
 
   const grandTotal = Object.values(groups).reduce((s, g) => s + g.total, 0);
-  const typeLabel  = Object.fromEntries(INC_TYPE_OPTIONS.map(o => [o.value, o.label]));
+  const typeLabel  = Object.fromEntries(Object.entries(INCOME_TYPE_REGISTRY).map(([k, v]) => [k, v.label]));
 
   const rowsHtml = Object.entries(groups).map(([t, g]) => `
     <div class="uli-rollup-row">
@@ -7013,23 +7382,8 @@ function renderIncUliSummary() {
 }
 
 // ── EXPENSE LOG ───────────────────────────────────────────────────────────────
-const EXPENSE_CATS = {
-  strata:      { label: 'Body Corporate',        cls: 'cat-strata' },
-  gas:         { label: 'Gas & Electricity',     cls: 'cat-gas' },
-  insurance:   { label: 'Insurance',             cls: 'cat-insurance' },
-  interest:    { label: 'Interest on Loans',     cls: 'cat-interest' },
-  legal:       { label: 'Legal Expenses',        cls: 'cat-legal' },
-  other:       { label: 'Other',                 cls: 'cat-other' },
-  mgmt:        { label: 'Property Management',   cls: 'cat-management' },
-  rates:       { label: 'Rates and Taxes',       cls: 'cat-rates' },
-  maintenance: { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
-  // Legacy values — kept for backward compat with existing records
-  repairs:     { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
-  utilities:   { label: 'Utilities',             cls: 'cat-utilities' },
-  management:  { label: 'Property Management',   cls: 'cat-management' },
-  garden:      { label: 'Repairs and Maintenance', cls: 'cat-maintenance' },
-  water:       { label: 'Rates and Taxes',       cls: 'cat-rates' },
-};
+// EXPENSE_CATS is an alias for EXPENSE_CAT_REGISTRY — use lookupExpenseCat(value) for display.
+const EXPENSE_CATS = EXPENSE_CAT_REGISTRY;
 
 // ── INCOME LOG ────────────────────────────────────────────────────────────────
 function getIncomeLog(propertyId) {
@@ -7041,11 +7395,8 @@ function saveIncomeLog(propertyId, entries) {
   if (s) apiCall('PUT', `/data/income/${s.id}/${propertyId}`, entries).catch(() => {});
 }
 
-const INCOME_TYPES = {
-  rent:  { label: 'Rent Received', cls: 'cat-insurance' },
-  bond:  { label: 'Bond / Deposit', cls: 'cat-management' },
-  other: { label: 'Other Income',  cls: 'cat-other' },
-};
+// Backward-compat alias
+const INCOME_TYPES = INCOME_TYPE_REGISTRY;
 
 function renderIncomeLog(propertyId) {
   const container = document.getElementById(`income-log-body-${propertyId}`);

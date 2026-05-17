@@ -618,6 +618,72 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────
+// PLATFORM CATEGORIES
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/categories — public, no auth required (needed at app startup)
+app.get('/api/categories', async (req, res) => {
+  const { data, error } = await supabase
+    .from('platform_categories')
+    .select('*')
+    .order('kind')
+    .order('label');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data.map(c => ({
+    id:         c.id,
+    kind:       c.kind,
+    value:      c.value,
+    label:      c.label,
+    cls:        c.cls,
+    activeFrom: c.active_from,
+    activeTo:   c.active_to,
+    createdAt:  c.created_at,
+    updatedAt:  c.updated_at,
+  })));
+});
+
+// POST /api/categories — admin only, create a new category
+app.post('/api/categories', requireAdmin, async (req, res) => {
+  const { kind, value, label, cls, activeFrom, activeTo } = req.body;
+  if (!kind || !value || !label) return res.status(400).json({ error: 'kind, value and label are required' });
+  if (!['expense', 'income'].includes(kind)) return res.status(400).json({ error: 'kind must be expense or income' });
+
+  const { data, error } = await supabase.from('platform_categories').insert({
+    id:          'cat_' + Date.now(),
+    kind,
+    value:       value.toLowerCase().replace(/\s+/g, '_'),
+    label,
+    cls:         cls || ('cat-' + value.toLowerCase().replace(/\s+/g, '-')),
+    active_from: activeFrom || null,
+    active_to:   activeTo   || null,
+    created_at:  new Date().toISOString(),
+    updated_at:  new Date().toISOString(),
+  }).select().single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ id: data.id, kind: data.kind, value: data.value, label: data.label, cls: data.cls, activeFrom: data.active_from, activeTo: data.active_to, createdAt: data.created_at });
+});
+
+// PATCH /api/categories/:id — admin only, update label or retire (set activeTo)
+app.patch('/api/categories/:id', requireAdmin, async (req, res) => {
+  const updates = { updated_at: new Date().toISOString() };
+  if (req.body.label      !== undefined) updates.label      = req.body.label;
+  if (req.body.cls        !== undefined) updates.cls        = req.body.cls;
+  if (req.body.activeFrom !== undefined) updates.active_from = req.body.activeFrom;
+  if (req.body.activeTo   !== undefined) updates.active_to   = req.body.activeTo;
+
+  const { error } = await supabase.from('platform_categories').update(updates).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// DELETE /api/categories/:id — admin only
+app.delete('/api/categories/:id', requireAdmin, async (req, res) => {
+  await supabase.from('platform_categories').delete().eq('id', req.params.id);
+  res.json({ success: true });
+});
+
+// ─────────────────────────────────────────────────────────────────
 // Health
 // ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
