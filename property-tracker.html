@@ -4794,17 +4794,20 @@ async function loadAdminCategories() {
     const el = document.getElementById('cat-panel-' + k);
     if (el) el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">Loading…</div>`;
   });
+  const fromRegistry = (registry, kind) => Object.entries(registry).map(([value, v]) => ({
+    id: null, kind, value, label: v.label, cls: v.cls, activeFrom: v.activeFrom, activeTo: v.activeTo, _local: true,
+  }));
   try {
     const cats = await apiCall('GET', '/categories');
     _catStore = {};
     cats.forEach(c => { if (c.id) _catStore[c.id] = c; });
-    renderCategoryPanel('expense', cats.filter(c => c.kind === 'expense'));
-    renderCategoryPanel('income',  cats.filter(c => c.kind === 'income'));
+    const expCats = cats.filter(c => c.kind === 'expense');
+    const incCats = cats.filter(c => c.kind === 'income');
+    // If DB table is empty, fall back to the built-in registry so categories are always visible
+    renderCategoryPanel('expense', expCats.length ? expCats : fromRegistry(EXPENSE_CAT_REGISTRY, 'expense'));
+    renderCategoryPanel('income',  incCats.length ? incCats : fromRegistry(INCOME_TYPE_REGISTRY, 'income'));
   } catch(e) {
     // Fall back to displaying the hardcoded registry
-    const fromRegistry = (registry, kind) => Object.entries(registry).map(([value, v]) => ({
-      id: null, kind, value, label: v.label, cls: v.cls, activeFrom: v.activeFrom, activeTo: v.activeTo, _local: true,
-    }));
     renderCategoryPanel('expense', fromRegistry(EXPENSE_CAT_REGISTRY, 'expense'));
     renderCategoryPanel('income',  fromRegistry(INCOME_TYPE_REGISTRY, 'income'));
   }
