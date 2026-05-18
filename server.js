@@ -21,15 +21,20 @@ const supabase = createClient(
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-long-random-string';
 
 // ── Email (Ventra IP SMTP via Nodemailer) ─────────────────────────
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
 const mailer = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST || 'mail.ventraip.com.au',
-  port:   parseInt(process.env.SMTP_PORT || '465'),
-  secure: (process.env.SMTP_PORT || '465') === '465',
+  host:   process.env.SMTP_HOST || 'mail.logixinity.com',
+  port:   smtpPort,
+  secure: smtpPort === 465,   // true for 465, false for 587 (STARTTLS)
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: { rejectUnauthorized: false }, // accept self-signed certs (common on cPanel hosts)
 });
+
+// Verify SMTP on startup
+mailer.verify().then(() => console.log('✅  SMTP ready')).catch(e => console.error('❌  SMTP error:', e.message));
 
 const EMAIL_FROM   = process.env.SMTP_USER || 'ram.raj@logixinity.com';
 const APP_NAME     = 'Propertiq';
@@ -668,6 +673,25 @@ app.post('/api/admin/set-plan', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────
 // Admin — Restart Server
 // ─────────────────────────────────────────────────────────────────
+// Test email
+app.post('/api/admin/test-email', requireAdmin, async (req, res) => {
+  const { to } = req.body;
+  if (!to) return res.status(400).json({ error: 'Recipient email required.' });
+  try {
+    await mailer.verify();
+    await mailer.sendMail({
+      from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
+      to,
+      subject: `${APP_NAME} — Test Email`,
+      html:    `<p>This is a test email from <strong>${APP_NAME}</strong>. If you're reading this, SMTP is working correctly.</p>`,
+    });
+    res.json({ success: true, message: `Test email sent to ${to}` });
+  } catch (err) {
+    console.error('Test email error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/admin/restart', requireAdmin, async (req, res) => {
   const apiKey    = process.env.RENDER_API_KEY;
   const serviceId = process.env.RENDER_SERVICE_ID;

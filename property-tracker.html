@@ -2912,6 +2912,22 @@
           <div class="stat-card"><div class="stat-card-accent" style="background:#8B5CF6;"></div><div class="stat-card-body"><div class="stat-label">DB Records</div><div class="stat-value" id="sys-db-records">–</div></div></div>
         </div>
 
+        <!-- Email Test -->
+        <div class="section-header" style="margin-top:28px;margin-bottom:16px;">
+          <span class="section-title">Email Configuration</span>
+        </div>
+        <div class="detail-card" style="padding:20px;">
+          <div style="font-size:13px;color:var(--gray-600);margin-bottom:14px;">Send a test email to verify your SMTP settings are working correctly.</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="email" id="test-email-input" class="auth-input" placeholder="recipient@example.com" style="max-width:280px;margin:0;" onkeydown="if(event.key==='Enter') sendTestEmail()">
+            <button class="btn btn-outline btn-sm" onclick="sendTestEmail()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+              Send Test Email
+            </button>
+          </div>
+          <div id="test-email-result" style="margin-top:10px;font-size:13px;display:none;"></div>
+        </div>
+
       </div><!-- end admin-panel-system -->
 
     </div>
@@ -4688,6 +4704,22 @@ function switchAdminTab(tab) {
   });
   if (tab === 'system' || tab === 'business' || tab === 'marketing') loadSystemStats();
   if (tab === 'business') loadAdminCategories();
+}
+
+async function sendTestEmail() {
+  const to     = document.getElementById('test-email-input').value.trim();
+  const resEl  = document.getElementById('test-email-result');
+  resEl.style.display = 'none';
+  if (!to) { resEl.textContent = 'Please enter a recipient email.'; resEl.style.color = 'var(--danger)'; resEl.style.display = 'block'; return; }
+  try {
+    const data = await apiCall('POST', '/admin/test-email', { to });
+    resEl.textContent = '✅ ' + data.message;
+    resEl.style.color = 'var(--success)';
+  } catch (err) {
+    resEl.textContent = '❌ ' + err.message;
+    resEl.style.color = 'var(--danger)';
+  }
+  resEl.style.display = 'block';
 }
 
 async function restartServer() {
