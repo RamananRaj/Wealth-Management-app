@@ -4886,7 +4886,8 @@ async function loadSystemStats() {
         if (!states.length) {
           geoEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">No property state data yet.</div>`;
         } else {
-          geoEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+          geoEl.innerHTML = `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+            <colgroup><col style="width:40%"><col style="width:15%"><col style="width:12%"><col style="width:33%"></colgroup>
             <thead><tr style="background:var(--gray-50);">
               <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">State</th>
               <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Properties</th>
@@ -4920,7 +4921,8 @@ async function loadSystemStats() {
           typeEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">No property type data yet.</div>`;
         } else {
           const typeColors = { residential:'#0176D3', commercial:'#8B5CF6', land:'#2E844A', industrial:'#DD7A01', Unknown:'#9E9D9A' };
-          typeEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+          typeEl.innerHTML = `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+            <colgroup><col style="width:40%"><col style="width:15%"><col style="width:12%"><col style="width:33%"></colgroup>
             <thead><tr style="background:var(--gray-50);">
               <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Type</th>
               <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Properties</th>
