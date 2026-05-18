@@ -3064,8 +3064,59 @@
     <div class="auth-link" style="margin-top:14px;">
       Don't have an account? <span onclick="showAuthScreen('register')">Register</span>
     </div>
+    <div class="auth-link" style="margin-top:8px;">
+      <span onclick="showAuthScreen('forgot')" style="color:var(--gray-400);font-size:12px;cursor:pointer;text-decoration:underline;">Forgot your password?</span>
+    </div>
     <div class="auth-link" style="margin-top:8px; font-size:11px; color:var(--gray-400);">
       First time? <span onclick="showAuthScreen('register')" style="color:var(--gray-400); font-weight:400; text-decoration:underline; cursor:pointer;">Set up your admin account</span>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Screen -->
+<div class="auth-screen" id="auth-forgot" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏠</div>
+      <div class="auth-logo-name">Wealth Manager</div>
+      <div class="auth-logo-sub">Property Portfolio</div>
+    </div>
+    <div class="auth-title">Reset Password</div>
+    <div id="forgot-msg" style="font-size:13px;color:var(--gray-600);margin-bottom:16px;display:none;"></div>
+    <div class="auth-error" id="forgot-error"></div>
+    <div class="auth-form" id="forgot-form">
+      <div class="form-group">
+        <label>Email address</label>
+        <input type="email" id="forgot-email" class="auth-input" placeholder="you@example.com" onkeydown="if(event.key==='Enter') authForgotPassword()">
+      </div>
+      <button class="auth-btn" onclick="authForgotPassword()">Send Reset Link</button>
+    </div>
+    <div class="auth-link" style="margin-top:14px;">
+      <span onclick="showAuthScreen('login')">← Back to Sign In</span>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Screen -->
+<div class="auth-screen" id="auth-reset" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏠</div>
+      <div class="auth-logo-name">Wealth Manager</div>
+      <div class="auth-logo-sub">Property Portfolio</div>
+    </div>
+    <div class="auth-title">Set New Password</div>
+    <div class="auth-error" id="reset-error"></div>
+    <div class="auth-form">
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="reset-password" class="auth-input" placeholder="Min. 6 characters" onkeydown="if(event.key==='Enter') authResetPassword()">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="reset-confirm" class="auth-input" placeholder="Repeat new password" onkeydown="if(event.key==='Enter') authResetPassword()">
+      </div>
+      <button class="auth-btn" onclick="authResetPassword()">Update Password</button>
     </div>
   </div>
 </div>
@@ -3859,6 +3910,48 @@ async function authLogin() {
   }
 }
 
+async function authForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  const errEl = document.getElementById('forgot-error');
+  const msgEl = document.getElementById('forgot-msg');
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; return; }
+  try {
+    await apiCall('POST', '/auth/forgot-password', { email });
+    document.getElementById('forgot-form').style.display = 'none';
+    msgEl.textContent = `If an account exists for ${email}, a reset link has been sent. Check your inbox (and spam folder).`;
+    msgEl.style.display = 'block';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function authResetPassword() {
+  const token    = new URLSearchParams(window.location.search).get('reset');
+  const password = document.getElementById('reset-password').value;
+  const confirm  = document.getElementById('reset-confirm').value;
+  const errEl    = document.getElementById('reset-error');
+  errEl.style.display = 'none';
+  if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+  try {
+    await apiCall('POST', '/auth/reset-password', { token, password });
+    // Clear token from URL and go to login
+    history.replaceState(null, '', window.location.pathname);
+    showAuthScreen('login');
+    const errLogin = document.getElementById('login-error');
+    errLogin.textContent = 'Password updated successfully. Please sign in.';
+    errLogin.style.background = '#F0FDF4';
+    errLogin.style.color = '#166534';
+    errLogin.style.border = '1px solid #BBF7D0';
+    errLogin.style.display = 'block';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
 function authLogout() {
   if (!confirm('Sign out of Wealth Manager?')) return;
   clearToken();
@@ -3901,6 +3994,14 @@ function seedBlogIfEmpty() {
 }
 
 function initApp() {
+  // Check for password reset token in URL query string
+  const resetToken = new URLSearchParams(window.location.search).get('reset');
+  if (resetToken) {
+    document.getElementById('layout').style.display = 'none';
+    showAuthScreen('reset');
+    return;
+  }
+
   const session = getSession();
   if (!session) {
     showAuthScreen('login');

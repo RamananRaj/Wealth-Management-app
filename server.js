@@ -1,11 +1,13 @@
 require('dotenv').config();
 
-const express  = require('express');
-const cors     = require('cors');
-const stripe   = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const express    = require('express');
+const cors       = require('cors');
+const stripe     = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
-const jwt      = require('jsonwebtoken');
-const bcrypt   = require('bcryptjs');
+const jwt        = require('jsonwebtoken');
+const bcrypt     = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const crypto     = require('crypto');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +19,67 @@ const supabase = createClient(
 );
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-long-random-string';
+
+// ── Email (Ventra IP SMTP via Nodemailer) ─────────────────────────
+const mailer = nodemailer.createTransport({
+  host:   process.env.SMTP_HOST || 'mail.ventraip.com.au',
+  port:   parseInt(process.env.SMTP_PORT || '465'),
+  secure: (process.env.SMTP_PORT || '465') === '465',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+const EMAIL_FROM   = process.env.SMTP_USER || 'ram.raj@logixinity.com';
+const APP_NAME     = 'Propertiq';
+const APP_URL      = process.env.APP_URL || 'https://ramananraj.github.io/Wealth-Management-app';
+
+async function sendWelcomeEmail(user) {
+  if (!process.env.SMTP_USER) return; // skip if not configured
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+      <div style="background:#1E3A5F;padding:28px 32px;border-radius:8px 8px 0 0;">
+        <h1 style="color:#fff;margin:0;font-size:22px;">${APP_NAME}</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <h2 style="margin-top:0;">Welcome, ${user.first_name}!</h2>
+        <p>Your ${APP_NAME} account is ready. You can now track your property portfolio, monitor income and expenses, and stay on top of your investments — all in one place.</p>
+        <a href="${APP_URL}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#1E3A5F;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Open ${APP_NAME}</a>
+        <p style="color:#6b7280;font-size:13px;margin-top:24px;">If you didn't create this account, you can safely ignore this email.</p>
+      </div>
+    </div>`;
+  await mailer.sendMail({
+    from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
+    to:      user.email,
+    subject: `Welcome to ${APP_NAME}`,
+    html,
+  }).catch(err => console.error('Welcome email failed:', err.message));
+}
+
+async function sendPasswordResetEmail(email, token) {
+  if (!process.env.SMTP_USER) return;
+  const resetUrl = `${APP_URL}?reset=${token}`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
+      <div style="background:#1E3A5F;padding:28px 32px;border-radius:8px 8px 0 0;">
+        <h1 style="color:#fff;margin:0;font-size:22px;">${APP_NAME}</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+        <h2 style="margin-top:0;">Reset your password</h2>
+        <p>We received a request to reset the password for your ${APP_NAME} account.</p>
+        <a href="${resetUrl}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#1E3A5F;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Reset Password</a>
+        <p style="color:#6b7280;font-size:13px;">This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password won't change.</p>
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px;word-break:break-all;">Or copy this link: ${resetUrl}</p>
+      </div>
+    </div>`;
+  await mailer.sendMail({
+    from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
+    to:      email,
+    subject: `Reset your ${APP_NAME} password`,
+    html,
+  }).catch(err => console.error('Reset email failed:', err.message));
+}
 
 // ── Stripe Price IDs
 const PLAN_PRICES = {
@@ -219,6 +282,7 @@ app.post('/api/auth/register', async (req, res) => {
   );
 
   console.log(`✅  Registered: ${email} as ${assignedRole}`);
+  sendWelcomeEmail(user); // non-blocking
   res.json({ token, user: sanitizeUser(user) });
 });
 
@@ -247,6 +311,63 @@ app.post('/api/auth/login', async (req, res) => {
 
   console.log(`🔑  Login: ${email}`);
   res.json({ token, user: sanitizeUser(user) });
+});
+
+// Forgot password — send reset email
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required.' });
+
+  const { data: user } = await supabase.from('users')
+    .select('id, email, first_name, status')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+
+  // Always return success to avoid email enumeration
+  if (!user || user.status !== 'active') {
+    return res.json({ success: true });
+  }
+
+  const token   = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+  await supabase.from('users').update({
+    reset_token:         token,
+    reset_token_expires: expires,
+    updated_at:          new Date().toISOString(),
+  }).eq('id', user.id);
+
+  await sendPasswordResetEmail(user.email, token);
+  console.log(`🔑  Password reset requested: ${email}`);
+  res.json({ success: true });
+});
+
+// Reset password — validate token and set new password
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token and password required.' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+  const { data: user } = await supabase.from('users')
+    .select('id, email, reset_token, reset_token_expires')
+    .eq('reset_token', token)
+    .maybeSingle();
+
+  if (!user) return res.status(400).json({ error: 'Invalid or expired reset link.' });
+  if (new Date(user.reset_token_expires) < new Date()) {
+    return res.status(400).json({ error: 'This reset link has expired. Please request a new one.' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await supabase.from('users').update({
+    password_hash:       passwordHash,
+    reset_token:         null,
+    reset_token_expires: null,
+    updated_at:          new Date().toISOString(),
+  }).eq('id', user.id);
+
+  console.log(`✅  Password reset: ${user.email}`);
+  res.json({ success: true });
 });
 
 // Get current user

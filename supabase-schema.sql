@@ -18,6 +18,8 @@ create table if not exists users (
   advisor_id            text references users(id),
   stripe_customer_id    text,
   stripe_subscription_id text,
+  reset_token           text,
+  reset_token_expires   timestamptz,
   created_at            timestamptz default now(),
   updated_at            timestamptz default now()
 );
