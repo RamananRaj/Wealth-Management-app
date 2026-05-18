@@ -2717,8 +2717,11 @@
         <div class="section-header" style="margin-bottom:16px;">
           <span class="section-title">Category Management</span>
           <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Manage expense and income categories across financial years</span>
+          <button id="cat-toggle-btn" onclick="toggleAdminSection('cat')" title="Collapse / Expand" style="margin-left:auto;background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;color:var(--gray-500);transition:transform .2s;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
         </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+        <div class="detail-card" id="cat-section-body" style="padding:0; overflow:hidden; margin-bottom:24px;">
           <div style="padding:16px 20px; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
             <div style="display:inline-flex;gap:4px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:4px;">
               <button id="cat-tab-btn-expense" onclick="switchCatTab('expense')" style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:white;color:var(--gray-800);box-shadow:0 1px 3px rgba(0,0,0,0.10);transition:all .12s;">Expense Categories</button>
