@@ -3637,7 +3637,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeCategoryModal()">Cancel</button>
-      <button class="btn btn-primary" id="cat-modal-save-btn" onclick="saveCategoryModal()">Save Category</button>
+      <button type="button" class="btn btn-primary" id="cat-modal-save-btn" onclick="saveCategoryModal()">Save Category</button>
     </div>
   </div>
 </div>
@@ -4901,13 +4901,15 @@ function closeCategoryModal() {
 }
 
 async function saveCategoryModal() {
+  const errEl = document.getElementById('cat-modal-error');
+  const btn   = document.getElementById('cat-modal-save-btn');
+  try {
   const id        = document.getElementById('cat-modal-id').value.trim();
   const kind      = document.getElementById('cat-modal-kind').value;
   const value     = document.getElementById('cat-modal-value').value.trim();
   const label     = document.getElementById('cat-modal-label').value.trim();
   const activeFrom = document.getElementById('cat-modal-from').value.trim();
   const activeTo   = document.getElementById('cat-modal-to').value.trim();
-  const errEl = document.getElementById('cat-modal-error');
 
   if (!label) { errEl.textContent = 'Display label is required.'; errEl.style.display=''; return; }
   if (!id && !value) { errEl.textContent = 'Code (value key) is required.'; errEl.style.display=''; return; }
@@ -4918,7 +4920,6 @@ async function saveCategoryModal() {
   if (activeTo   && !fyRe.test(activeTo))   { errEl.textContent = 'Retire After must be in YYYY-YYYY format, e.g. 2025-2026.'; errEl.style.display=''; return; }
 
   errEl.style.display = 'none';
-  const btn = document.getElementById('cat-modal-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
   try {
@@ -4943,6 +4944,11 @@ async function saveCategoryModal() {
     errEl.style.display = '';
     btn.disabled = false;
     btn.textContent = id ? 'Update Category' : 'Save Category';
+  }
+  } catch(outerErr) {
+    // Catch any unexpected JS error and show it rather than silently failing
+    if (errEl) { errEl.textContent = 'Unexpected error: ' + outerErr.message; errEl.style.display = ''; }
+    if (btn)   { btn.disabled = false; btn.textContent = 'Save Category'; }
   }
 }
 
