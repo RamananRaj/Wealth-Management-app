@@ -4709,17 +4709,29 @@ function switchAdminTab(tab) {
 async function sendTestEmail() {
   const to     = document.getElementById('test-email-input').value.trim();
   const resEl  = document.getElementById('test-email-result');
+  const btn    = document.querySelector('[onclick="sendTestEmail()"]');
   resEl.style.display = 'none';
-  if (!to) { resEl.textContent = 'Please enter a recipient email.'; resEl.style.color = 'var(--danger)'; resEl.style.display = 'block'; return; }
+  if (!to) {
+    resEl.textContent = 'Please enter a recipient email.';
+    resEl.style.color = 'var(--danger)';
+    resEl.style.display = 'block';
+    return;
+  }
+  // Show sending state
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Sending…`;
   try {
     const data = await apiCall('POST', '/admin/test-email', { to });
-    resEl.textContent = '✅ ' + data.message;
+    resEl.textContent = '✅ Test email sent to ' + to + ' — check your inbox (and spam folder).';
     resEl.style.color = 'var(--success)';
   } catch (err) {
-    resEl.textContent = '❌ ' + err.message;
+    resEl.textContent = '❌ Failed: ' + err.message;
     resEl.style.color = 'var(--danger)';
   }
   resEl.style.display = 'block';
+  btn.disabled = false;
+  btn.innerHTML = origHTML;
 }
 
 async function restartServer() {
