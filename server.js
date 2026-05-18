@@ -20,28 +20,32 @@ const supabase = createClient(
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-long-random-string';
 
-// ── Email (Ventra IP SMTP via Nodemailer) ─────────────────────────
-const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-const mailer = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST || 'mail.logixinity.com',
-  port:   smtpPort,
-  secure: smtpPort === 465,   // true for 465, false for 587 (STARTTLS)
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: { rejectUnauthorized: false }, // accept self-signed certs (common on cPanel hosts)
-});
+// ── Email (Resend API — works on Render free tier) ────────────────
+const APP_NAME = 'Propertiq';
+const APP_URL  = process.env.APP_URL || 'https://ramananraj.github.io/Wealth-Management-app';
 
-// Verify SMTP on startup
-mailer.verify().then(() => console.log('✅  SMTP ready')).catch(e => console.error('❌  SMTP error:', e.message));
+async function sendEmail({ to, subject, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { console.warn('⚠️  RESEND_API_KEY not set — email skipped'); return; }
 
-const EMAIL_FROM   = process.env.SMTP_USER || 'ram.raj@logixinity.com';
-const APP_NAME     = 'Propertiq';
-const APP_URL      = process.env.APP_URL || 'https://ramananraj.github.io/Wealth-Management-app';
+  // Use verified domain sender if available, otherwise Resend's default
+  const from = process.env.EMAIL_FROM
+    ? `"${APP_NAME}" <${process.env.EMAIL_FROM}>`
+    : `"${APP_NAME}" <onboarding@resend.dev>`;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ from, to, subject, html }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Resend API error');
+  return data;
+}
+
+console.log(process.env.RESEND_API_KEY ? '✅  Resend email ready' : '⚠️  RESEND_API_KEY not set');
 
 async function sendWelcomeEmail(user) {
-  if (!process.env.SMTP_USER) return; // skip if not configured
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
       <div style="background:#1E3A5F;padding:28px 32px;border-radius:8px 8px 0 0;">
@@ -54,16 +58,11 @@ async function sendWelcomeEmail(user) {
         <p style="color:#6b7280;font-size:13px;margin-top:24px;">If you didn't create this account, you can safely ignore this email.</p>
       </div>
     </div>`;
-  await mailer.sendMail({
-    from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
-    to:      user.email,
-    subject: `Welcome to ${APP_NAME}`,
-    html,
-  }).catch(err => console.error('Welcome email failed:', err.message));
+  await sendEmail({ to: user.email, subject: `Welcome to ${APP_NAME}`, html })
+    .catch(err => console.error('Welcome email failed:', err.message));
 }
 
 async function sendPasswordResetEmail(email, token) {
-  if (!process.env.SMTP_USER) return;
   const resetUrl = `${APP_URL}?reset=${token}`;
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
@@ -78,12 +77,8 @@ async function sendPasswordResetEmail(email, token) {
         <p style="color:#9ca3af;font-size:12px;margin-top:24px;word-break:break-all;">Or copy this link: ${resetUrl}</p>
       </div>
     </div>`;
-  await mailer.sendMail({
-    from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
-    to:      email,
-    subject: `Reset your ${APP_NAME} password`,
-    html,
-  }).catch(err => console.error('Reset email failed:', err.message));
+  await sendEmail({ to: email, subject: `Reset your ${APP_NAME} password`, html })
+    .catch(err => console.error('Reset email failed:', err.message));
 }
 
 // ── Stripe Price IDs
@@ -678,12 +673,10 @@ app.post('/api/admin/test-email', requireAdmin, async (req, res) => {
   const { to } = req.body;
   if (!to) return res.status(400).json({ error: 'Recipient email required.' });
   try {
-    await mailer.verify();
-    await mailer.sendMail({
-      from:    `"${APP_NAME}" <${EMAIL_FROM}>`,
+    await sendEmail({
       to,
       subject: `${APP_NAME} — Test Email`,
-      html:    `<p>This is a test email from <strong>${APP_NAME}</strong>. If you're reading this, SMTP is working correctly.</p>`,
+      html:    `<p>This is a test email from <strong>${APP_NAME}</strong>. If you're reading this, email delivery is working correctly.</p>`,
     });
     res.json({ success: true, message: `Test email sent to ${to}` });
   } catch (err) {
