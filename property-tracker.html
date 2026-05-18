@@ -6333,6 +6333,7 @@ function renderReports() {
       <div class="stat-card-body">
         <div class="stat-label">Portfolio Value</div>
         <div class="stat-value">${fmt(t.totValue)}</div>
+        <div class="stat-sub">${properties.length} propert${properties.length === 1 ? 'y' : 'ies'}</div>
       </div>
     </div>
     <div class="stat-card">
@@ -6344,10 +6345,19 @@ function renderReports() {
       </div>
     </div>
     <div class="stat-card">
+      <div class="stat-card-accent" style="background:#F59E0B;"></div>
+      <div class="stat-card-body">
+        <div class="stat-label">Total Debt</div>
+        <div class="stat-value">${fmt(t.totLoan)}</div>
+        <div class="stat-sub">across all mortgages</div>
+      </div>
+    </div>
+    <div class="stat-card">
       <div class="stat-card-accent" style="background:#8B5CF6;"></div>
       <div class="stat-card-body">
         <div class="stat-label">Annual Rental Income</div>
         <div class="stat-value">${fmt(t.totRent)}</div>
+        <div class="stat-sub">${fmt(t.totRent / 12)} / month</div>
       </div>
     </div>
     <div class="stat-card">
@@ -6355,6 +6365,15 @@ function renderReports() {
       <div class="stat-card-body">
         <div class="stat-label">Net Annual Cashflow</div>
         <div class="stat-value" style="color:${rptCfAccent};">${fmt(t.totCashflow)}</div>
+        <div class="stat-sub">${t.totCashflow >= 0 ? '<span class="stat-badge badge-green">▲ POSITIVE</span>' : '<span class="stat-badge badge-red">▼ NEGATIVE</span>'}</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-accent" style="background:#DC2626;"></div>
+      <div class="stat-card-body">
+        <div class="stat-label">Annual Expenses</div>
+        <div class="stat-value">${fmt(t.totExpenses)}</div>
+        <div class="stat-sub">excl. mortgage repayments</div>
       </div>
     </div>
   `;
