@@ -2665,6 +2665,158 @@
           <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Admin Users</div><div class="stat-value" id="admin-stat-admins">–</div></div></div>
         </div>
 
+        <!-- ── MARKETING INTELLIGENCE ── -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Marketing Intelligence</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Live segmentation data to inform targeted outreach</span>
+        </div>
+
+        <!-- Property Count Segments -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Customer Segments — Property Count</div>
+        <div class="stats-grid" style="margin-bottom:20px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--gray-300);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">No Properties Yet</div>
+              <div class="stat-value" id="seg-prop-none">–</div>
+              <div class="stat-sub">Registered, not started</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#06B6D4;"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">1 Property</div>
+              <div class="stat-value" id="seg-prop-one">–</div>
+              <div class="stat-sub">Free tier sweet spot</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--primary);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">2–3 Properties</div>
+              <div class="stat-value" id="seg-prop-twothree">–</div>
+              <div class="stat-sub">Starter tier (core market)</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#8B5CF6;"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">4+ Properties</div>
+              <div class="stat-value" id="seg-prop-fourplus">–</div>
+              <div class="stat-sub">Portfolio tier candidates</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Value Segments -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Customer Segments — Portfolio Value</div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#06B6D4;"></div>
+            <div class="stat-card-body"><div class="stat-label">Under $500K</div><div class="stat-value" id="seg-val-under500">–</div><div class="stat-sub">Entry-level investors</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--primary);"></div>
+            <div class="stat-card-body"><div class="stat-label">$500K – $1M</div><div class="stat-value" id="seg-val-500to1m">–</div><div class="stat-sub">Growing portfolios</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:#8B5CF6;"></div>
+            <div class="stat-card-body"><div class="stat-label">$1M – $2M</div><div class="stat-value" id="seg-val-1mto2m">–</div><div class="stat-sub">Established investors</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--success);"></div>
+            <div class="stat-card-body"><div class="stat-label">$2M+</div><div class="stat-value" id="seg-val-over2m">–</div><div class="stat-sub">High-value portfolio tier</div></div>
+          </div>
+        </div>
+
+        <!-- Upgrade Opportunities -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Upgrade Opportunities</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
+          <div class="detail-card" style="padding:0;overflow:hidden;">
+            <div style="background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 14px;">
+              <div style="font-size:11px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.05em;">→ Starter Pitch</div>
+            </div>
+            <div style="padding:14px;">
+              <div style="font-size:28px;font-weight:800;color:var(--gray-900);" id="seg-upg-free-with-props">–</div>
+              <div style="font-size:12px;color:var(--gray-600);margin-top:2px;">Free users with ≥1 property</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;line-height:1.5;">These users are engaged — they've added a property but haven't upgraded. Prime candidates for a Starter upgrade email.</div>
+            </div>
+          </div>
+          <div class="detail-card" style="padding:0;overflow:hidden;">
+            <div style="background:#F5F3FF;border-bottom:1px solid #DDD6FE;padding:10px 14px;">
+              <div style="font-size:11px;font-weight:700;color:#6D28D9;text-transform:uppercase;letter-spacing:.05em;">→ Portfolio Pitch</div>
+            </div>
+            <div style="padding:14px;">
+              <div style="font-size:28px;font-weight:800;color:var(--gray-900);" id="seg-upg-starter-4plus">–</div>
+              <div style="font-size:12px;color:var(--gray-600);margin-top:2px;">Starter users with 4+ properties</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;line-height:1.5;">Already paying, already growing. These users should be on Portfolio. Target with a personalised upgrade prompt.</div>
+            </div>
+          </div>
+          <div class="detail-card" style="padding:0;overflow:hidden;">
+            <div style="background:#F0FDF4;border-bottom:1px solid #BBF7D0;padding:10px 14px;">
+              <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.05em;">→ Advisor Match</div>
+            </div>
+            <div style="padding:14px;">
+              <div style="font-size:28px;font-weight:800;color:var(--gray-900);" id="seg-upg-no-advisor">–</div>
+              <div style="font-size:12px;color:var(--gray-600);margin-top:2px;">Users without an advisor</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;line-height:1.5;">Self-managed investors who could benefit from an advisor connection. Target with advisor-matching messaging.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Re-engagement -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Re-engagement Targets</div>
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--warning);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">Dormant — No Property</div>
+              <div class="stat-value" id="seg-re-no-prop">–</div>
+              <div class="stat-sub">Registered but never set up</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--warning);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">No Transactions Logged</div>
+              <div class="stat-value" id="seg-re-no-tx">–</div>
+              <div class="stat-sub">Have properties, no income/expense</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--success);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">Without Advisor</div>
+              <div class="stat-value" id="seg-re-no-advisor2">–</div>
+              <div class="stat-sub">Self-managed investors</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-accent" style="background:var(--primary);"></div>
+            <div class="stat-card-body">
+              <div class="stat-label">Plan Breakdown</div>
+              <div style="font-size:13px;font-weight:700;margin-top:4px;" id="seg-plan-summary">–</div>
+              <div class="stat-sub">Free / Starter / Portfolio</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Geographic Distribution -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Geographic Distribution — Properties by State</div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:32px;">
+          <div id="seg-geo-table">
+            <div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Property Type Mix -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Property Type Mix</div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:32px;">
+          <div id="seg-type-table">
+            <div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">Loading…</div>
+          </div>
+        </div>
+
         <!-- Broadcast Messages -->
         <div class="section-header" style="margin-bottom:16px;">
           <span class="section-title">Broadcast Messages</span>
@@ -4692,6 +4844,109 @@ async function loadSystemStats() {
         <td style="padding:10px 14px;font-size:13px;">${u.role}</td>
         <td style="padding:10px 14px;font-size:13px;color:var(--gray-400);">${(u.created_at||'').slice(0,10)}</td>
       </tr>`).join('');
+
+    // ── Marketing Intelligence segments ──────────────────────────
+    if (data.segments) {
+      const seg = data.segments;
+
+      // Property count segments
+      const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val ?? '–'; };
+      setEl('seg-prop-none',     seg.byPropertyCount?.none     ?? '–');
+      setEl('seg-prop-one',      seg.byPropertyCount?.one      ?? '–');
+      setEl('seg-prop-twothree', seg.byPropertyCount?.twoThree ?? '–');
+      setEl('seg-prop-fourplus', seg.byPropertyCount?.fourPlus ?? '–');
+
+      // Portfolio value segments
+      setEl('seg-val-under500', seg.byPortfolioValue?.under500k ?? '–');
+      setEl('seg-val-500to1m',  seg.byPortfolioValue?.f500kTo1m ?? '–');
+      setEl('seg-val-1mto2m',   seg.byPortfolioValue?.f1mTo2m   ?? '–');
+      setEl('seg-val-over2m',   seg.byPortfolioValue?.over2m    ?? '–');
+
+      // Upgrade opportunity cards
+      const upg = seg.upgradeOpportunities || {};
+      setEl('seg-upg-free-with-props',  upg.freeWithProperties        ?? '–');
+      setEl('seg-upg-starter-4plus',    upg.starterReadyForPortfolio  ?? '–');
+      setEl('seg-upg-no-advisor',       upg.withoutAdvisor            ?? '–');
+
+      // Re-engagement
+      setEl('seg-re-no-prop',   upg.neverAddedProperty ?? '–');
+      setEl('seg-re-no-tx',     upg.noTransactions     ?? '–');
+      setEl('seg-re-no-advisor2', upg.withoutAdvisor   ?? '–');
+
+      // Plan breakdown summary
+      const planEl = document.getElementById('seg-plan-summary');
+      if (planEl) planEl.textContent =
+        `${data.users.free||0} Free  /  ${data.users.investor||0} Starter  /  ${data.users.portfolio||0} Portfolio`;
+
+      // Geographic distribution table
+      const geoEl = document.getElementById('seg-geo-table');
+      if (geoEl) {
+        const states = seg.byState || [];
+        const totalProps = states.reduce((s, r) => s + r.count, 0);
+        if (!states.length) {
+          geoEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">No property state data yet.</div>`;
+        } else {
+          geoEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:var(--gray-50);">
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">State</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Properties</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Share</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Distribution</th>
+            </tr></thead>
+            <tbody>${states.map((r, i) => {
+              const pct = totalProps ? Math.round(r.count / totalProps * 100) : 0;
+              const bg  = i % 2 === 1 ? '#FAFAFA' : '#FFFFFF';
+              return `<tr style="background:${bg};border-bottom:1px solid var(--gray-100);">
+                <td style="padding:10px 16px;font-size:13px;font-weight:500;color:var(--gray-800);">${r.state || '–'}</td>
+                <td style="padding:10px 16px;font-size:13px;color:var(--gray-700);text-align:right;">${r.count}</td>
+                <td style="padding:10px 16px;font-size:13px;color:var(--gray-500);text-align:right;">${pct}%</td>
+                <td style="padding:10px 16px;">
+                  <div style="background:var(--gray-100);border-radius:100px;height:6px;width:100%;max-width:200px;">
+                    <div style="background:var(--primary);border-radius:100px;height:6px;width:${pct}%;"></div>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>`;
+        }
+      }
+
+      // Property type mix table
+      const typeEl = document.getElementById('seg-type-table');
+      if (typeEl) {
+        const types = seg.byPropertyType || [];
+        const totalT = types.reduce((s, r) => s + r.count, 0);
+        if (!types.length) {
+          typeEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">No property type data yet.</div>`;
+        } else {
+          const typeColors = { residential:'#0176D3', commercial:'#8B5CF6', land:'#2E844A', industrial:'#DD7A01', Unknown:'#9E9D9A' };
+          typeEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:var(--gray-50);">
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Type</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Properties</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:right;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Share</th>
+              <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--gray-200);">Distribution</th>
+            </tr></thead>
+            <tbody>${types.map((r, i) => {
+              const pct   = totalT ? Math.round(r.count / totalT * 100) : 0;
+              const bg    = i % 2 === 1 ? '#FAFAFA' : '#FFFFFF';
+              const color = typeColors[r.type] || typeColors.Unknown;
+              return `<tr style="background:${bg};border-bottom:1px solid var(--gray-100);">
+                <td style="padding:10px 16px;font-size:13px;font-weight:500;color:var(--gray-800);">${r.type}</td>
+                <td style="padding:10px 16px;font-size:13px;color:var(--gray-700);text-align:right;">${r.count}</td>
+                <td style="padding:10px 16px;font-size:13px;color:var(--gray-500);text-align:right;">${pct}%</td>
+                <td style="padding:10px 16px;">
+                  <div style="background:var(--gray-100);border-radius:100px;height:6px;width:100%;max-width:200px;">
+                    <div style="background:${color};border-radius:100px;height:6px;width:${pct}%;"></div>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>`;
+        }
+      }
+    }
+
   } catch(e) {
     document.getElementById('sys-api-status').innerHTML = '<span style="color:var(--danger);">❌ Error</span>';
   }

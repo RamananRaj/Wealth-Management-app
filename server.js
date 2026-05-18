@@ -573,17 +573,97 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     { count: msgCount },
     { count: incomeCount },
     { count: expenseCount },
+    { data: usersWithIncome },
+    { data: usersWithExpenses },
   ] = await Promise.all([
-    supabase.from('users').select('id, role, status, plan, created_at, first_name, last_name, email').order('created_at', { ascending: false }),
-    supabase.from('properties').select('id, user_id, value, loan'),
+    supabase.from('users').select('id, role, status, plan, advisor_id, created_at, first_name, last_name, email').order('created_at', { ascending: false }),
+    supabase.from('properties').select('id, user_id, value, loan, state, type'),
     supabase.from('messages').select('*', { count: 'exact', head: true }),
     supabase.from('income_log').select('*', { count: 'exact', head: true }),
     supabase.from('expenses').select('*', { count: 'exact', head: true }),
+    supabase.from('income_log').select('user_id'),
+    supabase.from('expenses').select('user_id'),
   ]);
 
   const dbMs = Date.now() - t0;
+
+  // ── Core property aggregates ──────────────────────────────────
   const totalValue  = (properties || []).reduce((s, p) => s + (p.value || 0), 0);
   const totalLoan   = (properties || []).reduce((s, p) => s + (p.loan  || 0), 0);
+
+  // ── Property count per user ───────────────────────────────────
+  const propCountByUser = {};
+  (properties || []).forEach(p => {
+    propCountByUser[p.user_id] = (propCountByUser[p.user_id] || 0) + 1;
+  });
+
+  // ── Portfolio value per user ──────────────────────────────────
+  const valueByUser = {};
+  (properties || []).forEach(p => {
+    valueByUser[p.user_id] = (valueByUser[p.user_id] || 0) + (p.value || 0);
+  });
+
+  // ── Users with activity ───────────────────────────────────────
+  const usersWithIncomeSet    = new Set((usersWithIncome   || []).map(r => r.user_id));
+  const usersWithExpensesSet  = new Set((usersWithExpenses || []).map(r => r.user_id));
+
+  // ── Regular (non-admin, non-advisor) users ────────────────────
+  const clientUsers = (users || []).filter(u => u.role === 'user');
+
+  // ── Property count segments ───────────────────────────────────
+  const byPropertyCount = {
+    none:     clientUsers.filter(u => !propCountByUser[u.id]).length,
+    one:      clientUsers.filter(u => propCountByUser[u.id] === 1).length,
+    twoThree: clientUsers.filter(u => propCountByUser[u.id] >= 2 && propCountByUser[u.id] <= 3).length,
+    fourPlus: clientUsers.filter(u => (propCountByUser[u.id] || 0) >= 4).length,
+  };
+
+  // ── Geographic distribution (by state on properties) ─────────
+  const stateCount = {};
+  (properties || []).forEach(p => {
+    const s = (p.state || '').trim() || 'Unknown';
+    stateCount[s] = (stateCount[s] || 0) + 1;
+  });
+  const byState = Object.entries(stateCount)
+    .map(([state, count]) => ({ state, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── Property type distribution ────────────────────────────────
+  const typeCount = {};
+  (properties || []).forEach(p => {
+    const t = (p.type || 'Unknown');
+    typeCount[t] = (typeCount[t] || 0) + 1;
+  });
+  const byPropertyType = Object.entries(typeCount)
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── Portfolio value buckets (per user total) ──────────────────
+  const allUserValues = clientUsers.map(u => valueByUser[u.id] || 0);
+  const byPortfolioValue = {
+    under500k:  allUserValues.filter(v => v > 0 && v <  500000).length,
+    f500kTo1m:  allUserValues.filter(v => v >= 500000  && v < 1000000).length,
+    f1mTo2m:    allUserValues.filter(v => v >= 1000000 && v < 2000000).length,
+    over2m:     allUserValues.filter(v => v >= 2000000).length,
+  };
+
+  // ── Upgrade opportunity cohorts ───────────────────────────────
+  const upgradeOpportunities = {
+    // Free users who have ≥1 property → ready for Starter pitch
+    freeWithProperties:    clientUsers.filter(u => u.plan === 'free' && (propCountByUser[u.id] || 0) > 0).length,
+    // Starter/investor users with 4+ properties → ready for Portfolio pitch
+    starterReadyForPortfolio: clientUsers.filter(u => u.plan === 'investor' && (propCountByUser[u.id] || 0) >= 4).length,
+    // Users without an advisor assigned
+    withoutAdvisor:        clientUsers.filter(u => !u.advisor_id).length,
+    // Registered but never added a property (dormant)
+    neverAddedProperty:    clientUsers.filter(u => !(propCountByUser[u.id])).length,
+    // Have properties but never logged any income or expenses
+    noTransactions:        clientUsers.filter(u =>
+      (propCountByUser[u.id] || 0) > 0 &&
+      !usersWithIncomeSet.has(u.id) &&
+      !usersWithExpensesSet.has(u.id)
+    ).length,
+  };
 
   res.json({
     server: {
@@ -610,9 +690,16 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       totalEquity: totalValue - totalLoan,
     },
     activity: {
-      messages: msgCount || 0,
-      incomeRecords: incomeCount || 0,
+      messages:       msgCount || 0,
+      incomeRecords:  incomeCount || 0,
       expenseRecords: expenseCount || 0,
+    },
+    segments: {
+      byPropertyCount,
+      byState,
+      byPropertyType,
+      byPortfolioValue,
+      upgradeOpportunities,
     },
   });
 });
