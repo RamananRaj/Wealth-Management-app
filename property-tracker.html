@@ -2519,6 +2519,11 @@
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Business Administration
         </button>
+        <button id="admin-tab-marketing" onclick="switchAdminTab('marketing')"
+          style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Marketing
+        </button>
         <button id="admin-tab-system" onclick="switchAdminTab('system')"
           style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -2665,10 +2670,70 @@
           <div class="stat-card"><div class="stat-card-accent" style="background:#0176D3;"></div><div class="stat-card-body"><div class="stat-label">Admin Users</div><div class="stat-value" id="admin-stat-admins">–</div></div></div>
         </div>
 
-        <!-- ── MARKETING INTELLIGENCE ── -->
+        <!-- Broadcast Messages -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Broadcast Messages</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Shown as a ribbon on all users' Home hub</span>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
+          <div class="bcast-compose">
+            <textarea id="bcast-msg-input" placeholder="Type your broadcast message here… e.g. Reserve Bank of Australia has lifted the interest rate by 0.25% for May."></textarea>
+            <div class="bcast-compose-row">
+              <input type="date" id="bcast-date-input" class="bcast-date-input">
+              <button class="btn btn-outline btn-sm" onclick="saveBroadcastDraft()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Draft
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="saveBroadcastAndPost()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+                Save &amp; Post
+              </button>
+            </div>
+          </div>
+          <div id="admin-broadcast-list"><!-- filled by JS --></div>
+        </div>
+
+        <!-- Blog Posts -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Blog Posts</span>
+          <button class="btn btn-primary btn-sm" onclick="openBlogModal()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Post
+          </button>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
+          <div id="admin-blog-list"><!-- filled by JS --></div>
+        </div>
+
+        <!-- Category Management -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Category Management</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Manage expense and income categories across financial years</span>
+        </div>
+        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="display:inline-flex;gap:4px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:4px;">
+              <button id="cat-tab-btn-expense" onclick="switchCatTab('expense')" style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:white;color:var(--gray-800);box-shadow:0 1px 3px rgba(0,0,0,0.10);transition:all .12s;">Expense Categories</button>
+              <button id="cat-tab-btn-income"  onclick="switchCatTab('income')"  style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:transparent;color:var(--gray-400);box-shadow:none;transition:all .12s;">Income Types</button>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openAddCategoryModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Category
+            </button>
+          </div>
+          <div id="cat-panel-expense" style="padding:0;"><!-- filled by JS --></div>
+          <div id="cat-panel-income"  style="display:none; padding:0;"><!-- filled by JS --></div>
+        </div>
+
+      </div><!-- end admin-panel-business -->
+
+      <!-- ── TAB 3: MARKETING ── -->
+      <div id="admin-panel-marketing" style="display:none;">
+
         <div class="section-header" style="margin-bottom:16px;">
           <span class="section-title">Marketing Intelligence</span>
           <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Live segmentation data to inform targeted outreach</span>
+          <button class="btn btn-outline btn-sm" onclick="loadSystemStats()" style="margin-left:auto;">↻ Refresh</button>
         </div>
 
         <!-- Property Count Segments -->
@@ -2817,64 +2882,9 @@
           </div>
         </div>
 
-        <!-- Broadcast Messages -->
-        <div class="section-header" style="margin-bottom:16px;">
-          <span class="section-title">Broadcast Messages</span>
-          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Shown as a ribbon on all users' Home hub</span>
-        </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
-          <div class="bcast-compose">
-            <textarea id="bcast-msg-input" placeholder="Type your broadcast message here… e.g. Reserve Bank of Australia has lifted the interest rate by 0.25% for May."></textarea>
-            <div class="bcast-compose-row">
-              <input type="date" id="bcast-date-input" class="bcast-date-input">
-              <button class="btn btn-outline btn-sm" onclick="saveBroadcastDraft()">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                Save Draft
-              </button>
-              <button class="btn btn-primary btn-sm" onclick="saveBroadcastAndPost()">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-                Save &amp; Post
-              </button>
-            </div>
-          </div>
-          <div id="admin-broadcast-list"><!-- filled by JS --></div>
-        </div>
+      </div><!-- end admin-panel-marketing -->
 
-        <!-- Blog Posts -->
-        <div class="section-header" style="margin-bottom:16px;">
-          <span class="section-title">Blog Posts</span>
-          <button class="btn btn-primary btn-sm" onclick="openBlogModal()">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Post
-          </button>
-        </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
-          <div id="admin-blog-list"><!-- filled by JS --></div>
-        </div>
-
-        <!-- Category Management -->
-        <div class="section-header" style="margin-bottom:16px;">
-          <span class="section-title">Category Management</span>
-          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Manage expense and income categories across financial years</span>
-        </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
-          <div style="padding:16px 20px; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <div style="display:inline-flex;gap:4px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:4px;">
-              <button id="cat-tab-btn-expense" onclick="switchCatTab('expense')" style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:white;color:var(--gray-800);box-shadow:0 1px 3px rgba(0,0,0,0.10);transition:all .12s;">Expense Categories</button>
-              <button id="cat-tab-btn-income"  onclick="switchCatTab('income')"  style="padding:5px 14px;border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;background:transparent;color:var(--gray-400);box-shadow:none;transition:all .12s;">Income Types</button>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="openAddCategoryModal()">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Category
-            </button>
-          </div>
-          <div id="cat-panel-expense" style="padding:0;"><!-- filled by JS --></div>
-          <div id="cat-panel-income"  style="display:none; padding:0;"><!-- filled by JS --></div>
-        </div>
-
-      </div><!-- end admin-panel-business -->
-
-      <!-- ── TAB 3: SYSTEM ADMIN ── -->
+      <!-- ── TAB 4: SYSTEM ADMIN ── -->
       <div id="admin-panel-system" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <span class="section-title">System Monitor</span>
@@ -4559,7 +4569,7 @@ function showAdvisorClientReport(clientId, fy) {
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 function switchAdminTab(tab) {
-  ['users','business','system'].forEach(t => {
+  ['users','business','marketing','system'].forEach(t => {
     const panel = document.getElementById('admin-panel-' + t);
     const btn   = document.getElementById('admin-tab-' + t);
     if (panel) panel.style.display = (t === tab) ? '' : 'none';
@@ -4575,7 +4585,7 @@ function switchAdminTab(tab) {
       }
     }
   });
-  if (tab === 'system' || tab === 'business') loadSystemStats();
+  if (tab === 'system' || tab === 'business' || tab === 'marketing') loadSystemStats();
   if (tab === 'business') loadAdminCategories();
 }
 
