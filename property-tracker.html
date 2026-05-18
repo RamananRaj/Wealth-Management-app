@@ -2285,6 +2285,7 @@
 
     <!-- PROPERTIES PAGE -->
     <div class="page" id="page-properties">
+      <div class="stats-grid" id="properties-stats" style="margin-bottom:20px;"><!-- filled by JS --></div>
       <div class="filter-bar" id="filter-bar">
         <span class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">All</span>
         <span class="filter-chip" data-filter="residential" onclick="setFilter('residential', this)">Residential</span>
@@ -5602,8 +5603,8 @@ function saveData() {
 }
 
 // ── NAVIGATION ──────────────────────────────────────────────────────────────
-const pageTitles    = { hub: 'Home', dashboard: 'Property Management', properties: 'Properties', detail: 'Property Detail', reports: 'Tax & Reports', propmanagement: 'Tenancy Management', admin: 'Admin', clients: 'My Clients', settings: 'Settings', blog: 'News & Updates', blogpost: 'News & Updates' };
-const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'All Properties', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'Administration Platform', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights' };
+const pageTitles    = { hub: 'Home', dashboard: 'Dashboard', properties: 'Property Management', detail: 'Property Detail', reports: 'Tax & Reports', propmanagement: 'Tenancy Management', admin: 'Admin', clients: 'My Clients', settings: 'Settings', blog: 'News & Updates', blogpost: 'News & Updates' };
+const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'Portfolio Overview', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'Administration Platform', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights' };
 
 function showPage(name) {
   // Stop ribbon carousel when leaving the hub
@@ -5630,7 +5631,7 @@ function showPage(name) {
   if (name === 'hub') renderHub();
   if (name === 'clients') { refreshAdminCache().then(() => renderClients()); }
   if (name === 'dashboard') renderDashboard();
-  if (name === 'properties') renderProperties();
+  if (name === 'properties') { renderProperties(); renderReports(); }
   if (name === 'reports') renderReports();
   if (name === 'propmanagement') renderPropManagement();
   if (name === 'admin') { refreshAdminCache().then(() => renderAdmin()); }
@@ -6326,7 +6327,7 @@ function renderReports() {
   const lvrClass = t.totLvr > 80 ? 'badge-red' : t.totLvr > 60 ? 'badge-yellow' : 'badge-green';
 
   const rptCfAccent = t.totCashflow >= 0 ? '#2E844A' : '#BA0517';
-  document.getElementById('report-stats').innerHTML = `
+  const statsHTML = `
     <div class="stat-card">
       <div class="stat-card-accent" style="background:#0176D3;"></div>
       <div class="stat-card-body">
@@ -6357,6 +6358,12 @@ function renderReports() {
       </div>
     </div>
   `;
+
+  // Populate stats on both Properties page and Reports page
+  const reportStats = document.getElementById('report-stats');
+  const propStats   = document.getElementById('properties-stats');
+  if (reportStats) reportStats.innerHTML = statsHTML;
+  if (propStats)   propStats.innerHTML   = statsHTML;
 
   const tbody = document.getElementById('report-tbody');
   if (properties.length === 0) {
