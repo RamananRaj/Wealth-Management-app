@@ -5748,7 +5748,7 @@ function renderHub() {
   if (greetEl) {
     greetEl.innerHTML = `
       <h2>${greeting}, ${displayName}!</h2>
-      <p>Here's your wealth management hub — select a feature to get started.</p>`;
+      <p>Your Launchpad — select a feature to get started.</p>`;
   }
 
   // Live stats
@@ -5790,6 +5790,15 @@ function renderHub() {
       icon: `<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
       title: 'Budget Management',
       desc:  'Plan and track budgets across all your properties and financial goals.',
+      statValue: null,
+      statLabel: null,
+      comingSoon: true,
+    },
+    {
+      color: '#DC2626', iconBg: '#FEF2F2', iconColor: '#DC2626',
+      icon: `<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+      title: 'Debt Elimination Plan',
+      desc:  'Build a structured plan to pay down debt faster and reduce interest costs.',
       statValue: null,
       statLabel: null,
       comingSoon: true,
