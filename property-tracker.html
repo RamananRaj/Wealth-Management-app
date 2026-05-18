@@ -2676,8 +2676,11 @@
         <div class="section-header" style="margin-bottom:16px;">
           <span class="section-title">Broadcast Messages</span>
           <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Shown as a ribbon on all users' Home hub</span>
+          <button id="bcast-toggle-btn" onclick="toggleAdminSection('bcast')" title="Collapse / Expand" style="margin-left:auto;background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;color:var(--gray-500);transition:transform .2s;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
         </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
+        <div class="detail-card" id="bcast-section-body" style="padding:0; overflow:hidden; margin-bottom:32px;">
           <div class="bcast-compose">
             <textarea id="bcast-msg-input" placeholder="Type your broadcast message here… e.g. Reserve Bank of Australia has lifted the interest rate by 0.25% for May."></textarea>
             <div class="bcast-compose-row">
@@ -2702,8 +2705,11 @@
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New Post
           </button>
+          <button id="blog-toggle-btn" onclick="toggleAdminSection('blog')" title="Collapse / Expand" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;color:var(--gray-500);transition:transform .2s;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
         </div>
-        <div class="detail-card" style="padding:0; overflow:hidden; margin-bottom:32px;">
+        <div class="detail-card" id="blog-section-body" style="padding:0; overflow:hidden; margin-bottom:32px;">
           <div id="admin-blog-list"><!-- filled by JS --></div>
         </div>
 
@@ -3645,6 +3651,7 @@
     <div class="modal-body">
       <form id="blog-form" onsubmit="saveBlogPost(event)">
         <input type="hidden" id="bf-id">
+        <input type="hidden" id="bf-published" value="true">
         <div class="form-group" style="margin-bottom:14px;">
           <label>Title *</label>
           <input type="text" id="bf-title" placeholder="e.g. Platform Update — May 2026" required>
@@ -3681,9 +3688,13 @@
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Delete
       </button>
-      <button class="btn btn-primary" onclick="document.getElementById('blog-form').requestSubmit()">
+      <button class="btn btn-outline" onclick="document.getElementById('bf-published').value='false'; document.getElementById('blog-form').requestSubmit();">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Save as Draft
+      </button>
+      <button class="btn btn-primary" onclick="document.getElementById('bf-published').value='true'; document.getElementById('blog-form').requestSubmit();">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        Publish Post
+        Publish
       </button>
     </div>
   </div>
@@ -7026,6 +7037,28 @@ function taxCopyCSV() {
 // ── BLOG ──────────────────────────────────────────────────────────────────────
 const WM_BLOG_KEY = 'wm_blog_posts';   // global (not user-prefixed)
 
+// ── Section collapse / expand ─────────────────────────────────────────────────
+function toggleAdminSection(name) {
+  const body = document.getElementById(`${name}-section-body`);
+  const btn  = document.getElementById(`${name}-toggle-btn`);
+  if (!body || !btn) return;
+  const isCollapsed = body.style.display === 'none';
+  body.style.display = isCollapsed ? '' : 'none';
+  btn.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+}
+
+// ── Toggle blog publish state from admin list ─────────────────────────────────
+function toggleBlogPublished(postId) {
+  const posts = getBlogPosts();
+  const idx   = posts.findIndex(p => p.id === postId);
+  if (idx < 0) return;
+  posts[idx].published = posts[idx].published === false ? true : false;
+  saveBlogPosts(posts);
+  renderAdminBlogList();
+  renderBlog();
+  showToast(posts[idx].published ? 'Post published' : 'Post unpublished', 'success');
+}
+
 function getBlogPosts() {
   return JSON.parse(localStorage.getItem(WM_BLOG_KEY) || '[]')
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -7061,9 +7094,13 @@ const BLOG_ACCENT_COLORS = {
 };
 
 function renderBlog() {
-  const posts   = getBlogPosts();
+  const allPosts = getBlogPosts();
+  const session  = getSession();
+  // Admins see all posts; regular users only see published ones
+  const posts    = session?.role === 'admin'
+    ? allPosts
+    : allPosts.filter(p => p.published !== false);
   const wrap    = document.getElementById('blog-grid-wrap');
-  const session = getSession();
   if (!wrap) return;
 
   if (posts.length === 0) {
@@ -7083,15 +7120,17 @@ function renderBlog() {
   }
 
   const cards = posts.map(p => {
-    const tag     = BLOG_TAGS[p.tag] || BLOG_TAGS.info;
-    const excerpt = p.excerpt || p.body.replace(/\n/g, ' ').substring(0, 110) + (p.body.length > 110 ? '…' : '');
+    const tag        = BLOG_TAGS[p.tag] || BLOG_TAGS.info;
+    const excerpt    = p.excerpt || p.body.replace(/\n/g, ' ').substring(0, 110) + (p.body.length > 110 ? '…' : '');
     const authorName = p.authorName || p.author || 'Admin';
-    const initials = blogAuthorInitials(authorName);
-    return `<div class="blog-card" onclick="openBlogPost('${p.id}')">
+    const initials   = blogAuthorInitials(authorName);
+    const isDraft    = p.published === false;
+    return `<div class="blog-card" onclick="openBlogPost('${p.id}')" style="${isDraft ? 'opacity:0.65;' : ''}">
       <div class="blog-card-accent ${tag.accent}"></div>
       <div class="blog-card-body">
         <div class="blog-card-meta-top">
           <span class="blog-card-tag ${tag.cls}">${tag.label}</span>
+          ${isDraft ? `<span style="font-size:10px;font-weight:700;letter-spacing:.05em;background:#F3F4F6;color:#9CA3AF;border-radius:4px;padding:2px 6px;">DRAFT</span>` : ''}
           <span class="blog-card-date">${fmtBlogDate(p.date)}</span>
         </div>
         <div class="blog-card-title">${p.title}</div>
@@ -7159,14 +7198,20 @@ function renderAdminBlogList() {
 
   el.innerHTML = `<div style="padding:0 20px;">` +
     posts.map(p => {
-      const tag = BLOG_TAGS[p.tag] || BLOG_TAGS.info;
+      const tag        = BLOG_TAGS[p.tag] || BLOG_TAGS.info;
+      const isPublished = p.published !== false;
       return `<div class="blog-admin-row">
         <span class="blog-card-tag ${tag.cls}" style="margin-top:2px; white-space:nowrap; flex-shrink:0;">${tag.label}</span>
         <div class="blog-admin-info">
           <div class="blog-admin-title">${p.title}</div>
-          <div class="blog-admin-sub">${fmtBlogDate(p.date)} · By ${p.authorName || 'Admin'}</div>
+          <div class="blog-admin-sub">${fmtBlogDate(p.date)} · By ${p.authorName || 'Admin'}
+            <span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;${isPublished ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}">
+              ${isPublished ? '● Published' : '○ Draft'}
+            </span>
+          </div>
         </div>
         <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button class="btn btn-outline btn-sm" onclick="toggleBlogPublished('${p.id}')">${isPublished ? 'Unpublish' : 'Publish'}</button>
           <button class="btn btn-outline btn-sm" onclick="openBlogModal('${p.id}')">Edit</button>
           <button class="btn btn-outline btn-sm" onclick="openBlogPost('${p.id}')">Preview</button>
         </div>
@@ -7187,12 +7232,13 @@ function openBlogModal(postId) {
     const post = getBlogPosts().find(p => p.id === postId);
     if (post) {
       document.getElementById('blog-modal-title').textContent = 'Edit Blog Post';
-      document.getElementById('bf-id').value      = post.id;
-      document.getElementById('bf-title').value   = post.title;
-      document.getElementById('bf-tag').value     = post.tag || 'info';
-      document.getElementById('bf-date').value    = post.date;
-      document.getElementById('bf-excerpt').value = post.excerpt || '';
-      document.getElementById('bf-body').value    = post.body;
+      document.getElementById('bf-id').value        = post.id;
+      document.getElementById('bf-title').value     = post.title;
+      document.getElementById('bf-tag').value       = post.tag || 'info';
+      document.getElementById('bf-date').value      = post.date;
+      document.getElementById('bf-excerpt').value   = post.excerpt || '';
+      document.getElementById('bf-body').value      = post.body;
+      document.getElementById('bf-published').value = post.published !== false ? 'true' : 'false';
       document.getElementById('blog-delete-btn').style.display = 'inline-flex';
     }
   }
@@ -7209,6 +7255,7 @@ function saveBlogPost(e) {
   const postId  = document.getElementById('bf-id').value || ('bp' + Date.now());
   const posts   = getBlogPosts();
 
+  const isPublished = document.getElementById('bf-published').value !== 'false';
   const post = {
     id:         postId,
     title:      document.getElementById('bf-title').value.trim(),
@@ -7216,6 +7263,7 @@ function saveBlogPost(e) {
     date:       document.getElementById('bf-date').value,
     excerpt:    document.getElementById('bf-excerpt').value.trim(),
     body:       document.getElementById('bf-body').value.trim(),
+    published:  isPublished,
     authorName: session ? session.firstName + ' ' + session.lastName : 'Admin',
     createdAt:  document.getElementById('bf-id').value ? posts.find(p=>p.id===postId)?.createdAt : new Date().toISOString(),
   };
@@ -7225,7 +7273,7 @@ function saveBlogPost(e) {
   saveBlogPosts(posts);
   closeBlogModal();
   renderAdminBlogList();
-  showToast(idx >= 0 ? 'Post updated' : 'Post published', 'success');
+  showToast(idx >= 0 ? (isPublished ? 'Post updated' : 'Saved as draft') : (isPublished ? 'Post published' : 'Draft saved'), 'success');
 }
 
 function deleteBlogPost() {
