@@ -2488,6 +2488,7 @@
 
       <div class="section-header" style="margin-top:28px; margin-bottom:16px;">
         <span class="section-title">Maintenance Log</span>
+        <div id="pm-maint-filters" style="display:flex; gap:8px; align-items:center;"></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -6282,20 +6283,34 @@ function renderPropManagement() {
   document.getElementById('pm-expiring').textContent = expiring;
   document.getElementById('pm-vacant').textContent = vacant;
 
+  // ── Maintenance log filters ──
+  const filtersDiv = document.getElementById('pm-maint-filters');
+  const savedFY    = document.getElementById('pm-maint-fy')   ? document.getElementById('pm-maint-fy').value   : currentFY();
+  const savedProp  = document.getElementById('pm-maint-prop') ? document.getElementById('pm-maint-prop').value : '';
+  filtersDiv.innerHTML = `
+    ${buildFYOptions('pm-maint-fy', 'renderPropManagement()', savedFY)}
+    <select id="pm-maint-prop" onchange="renderPropManagement()" style="padding:3px 8px;font-size:12px;font-family:inherit;border:1px solid var(--gray-300);border-radius:var(--radius);height:28px;background:white;color:var(--gray-800);cursor:pointer;">
+      <option value="">All Properties</option>
+      ${properties.map(p => `<option value="${p.id}"${p.id === savedProp ? ' selected' : ''}>${p.address}${p.suburb ? ', ' + p.suburb : ''}</option>`).join('')}
+    </select>
+  `;
+  const { start: fyStart, end: fyEnd } = fyToRange(savedFY);
+
   // ── Maintenance log (maintenance + repairs from daily expense log) ──
   const maintTbody = document.getElementById('pm-maintenance-tbody');
   const maintCats  = new Set(['maintenance','repairs','garden','legal']);
   let maintRows = [];
 
   properties.forEach(p => {
+    if (savedProp && p.id !== savedProp) return;
     getExpenses(p.id).forEach(e => {
-      if (maintCats.has(e.category)) {
+      if (maintCats.has(e.category) && e.date >= fyStart && e.date <= fyEnd) {
         maintRows.push({ ...e, propertyAddress: p.address, propertySuburb: p.suburb, propertyState: p.state });
       }
     });
     // Also pull from annual line items
     loadAllLiItems(p.id).forEach(r => {
-      if (maintCats.has(r.category)) {
+      if (maintCats.has(r.category) && r.date && r.date >= fyStart && r.date <= fyEnd) {
         maintRows.push({ ...r, propertyAddress: p.address, propertySuburb: p.suburb, propertyState: p.state });
       }
     });
@@ -6304,7 +6319,7 @@ function renderPropManagement() {
   maintRows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   if (maintRows.length === 0) {
-    maintTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-400); padding:32px;">No maintenance expenses recorded yet.<br><span style="font-size:12px;">Maintenance, Repairs and Garden entries from each property's expense log appear here.</span></td></tr>`;
+    maintTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-400); padding:32px;">No maintenance expenses for FY ${savedFY.replace('-','–')}${savedProp ? ' for this property' : ''}.<br><span style="font-size:12px;">Maintenance, Repairs and Garden entries from each property's expense log appear here.</span></td></tr>`;
   } else {
     maintTbody.innerHTML = maintRows.map(r => {
       const cat = EXPENSE_CATS[r.category] || EXPENSE_CATS.other;
