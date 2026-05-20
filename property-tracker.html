@@ -2268,6 +2268,7 @@
     <div class="page active" id="page-hub">
       <div id="hub-broadcast-ribbon"><!-- filled by JS --></div>
       <div class="hub-greeting" id="hub-greeting"></div>
+      <div id="hub-insights"><!-- filled by JS --></div>
       <div class="hub-grid" id="hub-grid"><!-- filled by JS --></div>
     </div>
 
@@ -5757,6 +5758,130 @@ function portfolioTotals() {
 }
 
 // ── HUB ──────────────────────────────────────────────────────────────────────
+// ── Rule-based insight engine (no LLM) ───────────────────────────────────────
+function computeInsights() {
+  const insights = [];
+  const today    = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const in90     = new Date(today); in90.setDate(in90.getDate() + 90);
+  const in90Str  = in90.toISOString().split('T')[0];
+  const in180    = new Date(today); in180.setDate(in180.getDate() + 180);
+  const in180Str = in180.toISOString().split('T')[0];
+
+  if (!properties.length) {
+    insights.push({ level:'info', title:'Add your first property', detail:'Get started by adding a property to track your portfolio.' });
+    return insights;
+  }
+
+  // 1 — Portfolio cashflow
+  const t = portfolioTotals();
+  if (t.totCashflow < 0) {
+    insights.push({ level:'danger', title:'Portfolio is cashflow negative', detail:`Your portfolio is losing ${fmt(Math.abs(t.totCashflow))} per year after expenses. Review rents and costs.` });
+  } else if (t.totCashflow > 0) {
+    insights.push({ level:'success', title:'Portfolio is cashflow positive', detail:`You are generating ${fmt(t.totCashflow)} net annual cashflow across your portfolio.` });
+  }
+
+  // 2 — High LVR (> 80%)
+  const highLVR = properties.filter(p => p.value && p.loan && (p.loan / p.value * 100) > 80);
+  if (highLVR.length) {
+    insights.push({ level:'danger', title:`${highLVR.length} propert${highLVR.length > 1 ? 'ies' : 'y'} above 80% LVR`, detail:`${highLVR.map(p => p.address).join(', ')} — high leverage increases risk exposure.` });
+  }
+
+  // 3 — Expired leases
+  const expired = properties.filter(p => p.leaseExpiry && p.leaseExpiry < todayStr && p.tenant);
+  if (expired.length) {
+    insights.push({ level:'danger', title:`${expired.length} lease${expired.length > 1 ? 's have' : ' has'} expired`, detail:`${expired.map(p => p.address).join(', ')} — arrange renewal or re-tenanting urgently.` });
+  }
+
+  // 4 — Leases expiring within 90 days
+  const expiringSoon = properties.filter(p => p.leaseExpiry && p.leaseExpiry >= todayStr && p.leaseExpiry <= in90Str);
+  if (expiringSoon.length) {
+    insights.push({ level:'warning', title:`${expiringSoon.length} lease${expiringSoon.length > 1 ? 's' : ''} expiring within 90 days`, detail:`${expiringSoon.map(p => p.address).join(', ')} — contact your property manager to arrange renewal.` });
+  }
+
+  // 5 — Vacant properties
+  const vacant = properties.filter(p => !p.tenant);
+  if (vacant.length) {
+    insights.push({ level:'warning', title:`${vacant.length} vacant propert${vacant.length > 1 ? 'ies' : 'y'}`, detail:`${vacant.map(p => p.address).join(', ')} — no tenant recorded. Lost income adds up quickly.` });
+  }
+
+  // 6 — Fixed rate loans expiring within 6 months
+  const fixedExpiring = properties.filter(p => p.fixedUntil && p.fixedUntil >= todayStr && p.fixedUntil <= in180Str);
+  if (fixedExpiring.length) {
+    insights.push({ level:'warning', title:`${fixedExpiring.length} fixed rate${fixedExpiring.length > 1 ? 's' : ''} expiring within 6 months`, detail:`${fixedExpiring.map(p => p.address).join(', ')} — start comparing refinancing options now.` });
+  }
+
+  // 7 — Missing insurance
+  const noInsurance = properties.filter(p => !p.insurance || +p.insurance === 0);
+  if (noInsurance.length) {
+    insights.push({ level:'warning', title:`${noInsurance.length} propert${noInsurance.length > 1 ? 'ies' : 'y'} with no insurance recorded`, detail:`${noInsurance.map(p => p.address).join(', ')} — ensure landlord insurance is in place.` });
+  }
+
+  // 8 — Low rental yield (< 4%)
+  const lowYield = properties.filter(p => {
+    if (!p.value || !p.weeklyRent) return false;
+    return (p.weeklyRent * 52 / p.value * 100) < 4;
+  });
+  if (lowYield.length) {
+    insights.push({ level:'info', title:`${lowYield.length} propert${lowYield.length > 1 ? 'ies' : 'y'} below 4% gross yield`, detail:`${lowYield.map(p => p.address).join(', ')} — consider reviewing rent against current market rates.` });
+  }
+
+  // 9 — No expenses logged this FY
+  const fy = currentFY();
+  const { start: fyStart, end: fyEnd } = fyToRange(fy);
+  const noExpenses = properties.filter(p => getExpensesForFY(p.id, fyStart, fyEnd).length === 0);
+  if (noExpenses.length) {
+    insights.push({ level:'info', title:`${noExpenses.length} propert${noExpenses.length > 1 ? 'ies' : 'y'} with no expenses logged this FY`, detail:`Log expenses for ${noExpenses.map(p => p.address).join(', ')} to keep your tax report accurate.` });
+  }
+
+  return insights;
+}
+
+function renderHubInsights() {
+  const el = document.getElementById('hub-insights');
+  if (!el) return;
+
+  const insights = computeInsights();
+  if (!insights.length) { el.innerHTML = ''; return; }
+
+  const levelCfg = {
+    danger:  { dot:'#DC2626', bg:'#FEF2F2', color:'#DC2626', label:'Action needed' },
+    warning: { dot:'#D97706', bg:'#FFF7ED', color:'#D97706', label:'Review'        },
+    info:    { dot:'#0176D3', bg:'#EFF6FF', color:'#0176D3', label:'Info'          },
+    success: { dot:'#059669', bg:'#ECFDF5', color:'#059669', label:'Good'          },
+  };
+
+  const order = ['danger','warning','info','success'];
+  insights.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+
+  const dangerCount  = insights.filter(i => i.level === 'danger').length;
+  const warningCount = insights.filter(i => i.level === 'warning').length;
+  const headerColor  = dangerCount  > 0 ? '#DC2626' : warningCount > 0 ? '#D97706' : '#0176D3';
+  const headerBg     = dangerCount  > 0 ? '#FEF2F2' : warningCount > 0 ? '#FFF7ED' : '#EFF6FF';
+  const shown = insights.slice(0, 6);
+
+  el.innerHTML = `
+    <div style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" fill="none" stroke="${headerColor}" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--gray-900);">Portfolio Insights</span>
+        <span style="background:${headerBg};color:${headerColor};font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;">${insights.length} insight${insights.length !== 1 ? 's' : ''}</span>
+      </div>
+      ${shown.map(ins => {
+        const cfg = levelCfg[ins.level];
+        return `<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--gray-100);">
+          <div style="width:8px;height:8px;border-radius:50%;background:${cfg.dot};flex-shrink:0;margin-top:5px;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--gray-900);margin-bottom:2px;">${ins.title}</div>
+            <div style="font-size:12px;color:var(--gray-500);line-height:1.5;">${ins.detail}</div>
+          </div>
+          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${cfg.bg};color:${cfg.color};white-space:nowrap;flex-shrink:0;margin-top:2px;">${cfg.label}</span>
+        </div>`;
+      }).join('')}
+      ${insights.length > 6 ? `<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);text-align:center;">+ ${insights.length - 6} more insight${insights.length - 6 !== 1 ? 's' : ''}</div>` : ''}
+    </div>`;
+}
+
 function renderHub() {
   const session = getSession();
   if (!session) return;
@@ -5775,6 +5900,9 @@ function renderHub() {
       <h2>${greeting}, ${displayName}!</h2>
       <p>Your Launchpad — select a feature to get started.</p>`;
   }
+
+  // Portfolio insights (rule-based)
+  renderHubInsights();
 
   // Live stats
   const t = portfolioTotals();
