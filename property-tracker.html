@@ -5918,68 +5918,113 @@ function matchInsightIntent(query) {
   return { matched: all, topic: 'general' };
 }
 
+// Find a specific property mentioned by name in the query (fuzzy word match)
+function findPropertyInQuery(query) {
+  if (!properties.length) return null;
+  const q = query.toLowerCase();
+  // Score each property by how many of its address words appear in the query
+  let best = null, bestScore = 0;
+  properties.forEach(p => {
+    const words = p.address.toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
+    const score = words.filter(w => q.includes(w)).length;
+    if (score > 0 && score > bestScore) { best = p; bestScore = score; }
+  });
+  return best;
+}
+
 // Build a direct data reply from raw property fields (no insights/alerts needed)
-function buildDataQueryReply(dataQuery) {
+function buildDataQueryReply(dataQuery, query) {
   if (!properties.length) return "You haven't added any properties yet. Head to **Property Management** to get started.";
 
+  // Try to narrow to a specific property if the user named one
+  const specificProp = query ? findPropertyInQuery(query) : null;
+  const scope        = specificProp ? [specificProp] : properties;
+  const scopeLabel   = specificProp ? `**${specificProp.address}**` : `your ${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}`;
+
   if (dataQuery === 'rates') {
-    const rows = properties.map(p => {
+    if (scope.length === 1) {
+      const p = scope[0];
+      const rate  = p.rate       ? `**${p.rate}% p.a.**`           : 'not recorded';
+      const type  = p.loanType   ? ` (${p.loanType})`              : '';
+      const fixed = p.fixedUntil ? `, fixed until ${p.fixedUntil}` : '';
+      return `The interest rate for ${scopeLabel} is ${rate}${type}${fixed}.`;
+    }
+    const rows = scope.map(p => {
       const rate   = p.rate       ? `**${p.rate}% p.a.**`          : 'not recorded';
       const type   = p.loanType   ? ` (${p.loanType})`             : '';
       const fixed  = p.fixedUntil ? `, fixed until ${p.fixedUntil}` : '';
       return `• **${p.address}**: ${rate}${type}${fixed}`;
     });
-    return `Here are the interest rates for your ${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}:\n\n${rows.join('\n')}`;
+    return `Here are the interest rates for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'repayments') {
-    const rows = properties.map(p => {
+    if (scope.length === 1) {
+      const p = scope[0];
+      const rep  = p.repayment ? `**${fmt(p.repayment)}/month**` : 'not recorded';
+      const type = p.loanType  ? ` (${p.loanType})`             : '';
+      return `The monthly repayment for ${scopeLabel} is ${rep}${type}.`;
+    }
+    const rows = scope.map(p => {
       const rep  = p.repayment ? `**${fmt(p.repayment)}/month**` : 'not recorded';
       const type = p.loanType  ? ` (${p.loanType})`             : '';
       return `• **${p.address}**: ${rep}${type}`;
     });
-    return `Monthly repayments across your portfolio:\n\n${rows.join('\n')}`;
+    return `Monthly repayments for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'lenders') {
-    const rows = properties.map(p => {
-      const lender = p.lender ? `**${p.lender}**` : 'not recorded';
-      return `• **${p.address}**: ${lender}`;
-    });
-    return `Lenders for your properties:\n\n${rows.join('\n')}`;
+    if (scope.length === 1) {
+      const p = scope[0];
+      return `The lender for ${scopeLabel} is ${p.lender ? `**${p.lender}**` : 'not recorded'}.`;
+    }
+    const rows = scope.map(p => `• **${p.address}**: ${p.lender ? `**${p.lender}**` : 'not recorded'}`);
+    return `Lenders for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'loanAmounts') {
-    const rows = properties.map(p => {
-      const loan = p.loanAmount ? `**${fmt(p.loanAmount)}**` : 'not recorded';
-      return `• **${p.address}**: ${loan}`;
-    });
-    return `Outstanding loan amounts:\n\n${rows.join('\n')}`;
+    if (scope.length === 1) {
+      const p = scope[0];
+      return `The outstanding loan for ${scopeLabel} is ${p.loanAmount ? `**${fmt(p.loanAmount)}**` : 'not recorded'}.`;
+    }
+    const rows = scope.map(p => `• **${p.address}**: ${p.loanAmount ? `**${fmt(p.loanAmount)}**` : 'not recorded'}`);
+    return `Outstanding loan amounts for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'values') {
-    const total = properties.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
-    const rows  = properties.map(p => {
-      const val = p.value ? `**${fmt(p.value)}**` : 'not recorded';
-      return `• **${p.address}**: ${val}`;
-    });
-    return `Property values:\n\n${rows.join('\n')}\n\n**Total portfolio value: ${fmt(total)}**`;
+    if (scope.length === 1) {
+      const p = scope[0];
+      return `${scopeLabel} is valued at ${p.value ? `**${fmt(p.value)}**` : 'not recorded'}.`;
+    }
+    const total = scope.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+    const rows  = scope.map(p => `• **${p.address}**: ${p.value ? `**${fmt(p.value)}**` : 'not recorded'}`);
+    return `Property values for ${scopeLabel}:\n\n${rows.join('\n')}\n\n**Total: ${fmt(total)}**`;
   }
 
   if (dataQuery === 'rents') {
-    const rows = properties.map(p => {
-      const weekly   = p.weeklyRent ? `**${fmt(p.weeklyRent)}/wk**` : 'not recorded';
-      const monthly  = p.weeklyRent ? ` (${fmt(p.weeklyRent * 52 / 12)}/mo)` : '';
+    if (scope.length === 1) {
+      const p = scope[0];
+      const weekly  = p.weeklyRent ? `**${fmt(p.weeklyRent)}/wk**` : 'not recorded';
+      const monthly = p.weeklyRent ? ` (${fmt(p.weeklyRent * 52 / 12)}/mo)` : '';
+      return `The weekly rent for ${scopeLabel} is ${weekly}${monthly}.`;
+    }
+    const rows = scope.map(p => {
+      const weekly  = p.weeklyRent ? `**${fmt(p.weeklyRent)}/wk**` : 'not recorded';
+      const monthly = p.weeklyRent ? ` (${fmt(p.weeklyRent * 52 / 12)}/mo)` : '';
       return `• **${p.address}**: ${weekly}${monthly}`;
     });
-    return `Weekly rental income for your properties:\n\n${rows.join('\n')}`;
+    return `Weekly rental income for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'fixedExpiry') {
-    const hasFixed = properties.filter(p => p.loanType && p.loanType.toLowerCase().includes('fixed') && p.fixedUntil);
-    if (!hasFixed.length) return "None of your properties have a recorded fixed rate expiry date. You can add this in **Property Management**.";
-    const rows = hasFixed.map(p => `• **${p.address}**: fixed rate expires **${p.fixedUntil}**${p.rate ? ` at ${p.rate}%` : ''}`);
-    return `Fixed rate expiry dates:\n\n${rows.join('\n')}`;
+    const hasFixed = scope.filter(p => p.loanType && p.loanType.toLowerCase().includes('fixed') && p.fixedUntil);
+    if (!hasFixed.length) return `No fixed rate expiry date is recorded for ${scopeLabel}. You can add this in **Property Management**.`;
+    if (hasFixed.length === 1) {
+      const p = hasFixed[0];
+      return `The fixed rate for ${scopeLabel} expires **${p.fixedUntil}**${p.rate ? ` at ${p.rate}%` : ''}.`;
+    }
+    const rows = hasFixed.map(p => `• **${p.address}**: expires **${p.fixedUntil}**${p.rate ? ` at ${p.rate}%` : ''}`);
+    return `Fixed rate expiry dates for ${scopeLabel}:\n\n${rows.join('\n')}`;
   }
 
   if (dataQuery === 'list') {
@@ -6137,7 +6182,7 @@ function sendInsightMessage(prefill) {
   let replyText, replyInsights;
   if (dataQuery) {
     // Direct data query — read raw property fields instead of alerts
-    const dataReply = buildDataQueryReply(dataQuery);
+    const dataReply = buildDataQueryReply(dataQuery, query);
     replyText    = dataReply !== null ? dataReply : buildInsightReply(query, matched, topic);
     replyInsights = [];
   } else {
