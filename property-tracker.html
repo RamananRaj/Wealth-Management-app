@@ -1675,6 +1675,8 @@
     from { opacity:0; transform:translateY(16px); }
     to   { opacity:1; transform:translateY(0); }
   }
+  #ai-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(1,118,211,.6); }
+  #ai-chat-popup.open { display: flex !important; animation: chatSlideUp .2s ease; }
   /* Header */
   .chat-header {
     background: #075E54; color: white;
@@ -2173,6 +2175,18 @@
 <div class="chat-popup" id="chat-popup">
   <div class="chat-header" id="chat-header"></div>
   <div id="chat-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
+</div>
+
+<!-- ── PORTFOLIO ASSISTANT WIDGET ── -->
+<button id="ai-fab" onclick="toggleInsightChat()" title="Portfolio Assistant"
+  style="position:fixed;bottom:28px;right:96px;width:56px;height:56px;border-radius:50%;background:#0176D3;color:white;border:none;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(1,118,211,.45);z-index:10000;transition:transform .2s,box-shadow .2s;">
+  <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span id="ai-fab-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#DC2626;color:white;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:10px;align-items:center;justify-content:center;padding:0 4px;border:2px solid white;"></span>
+</button>
+
+<div id="ai-chat-popup"
+  style="display:none;position:fixed;bottom:96px;right:96px;width:380px;height:520px;background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.22);z-index:9999;flex-direction:column;overflow:hidden;">
+  <div id="ai-chat-inner" style="display:flex;flex-direction:column;height:100%;"></div>
 </div>
 
 <div class="layout" id="layout" style="display:none;">
@@ -5634,6 +5648,11 @@ const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Over
 function showPage(name) {
   // Stop ribbon carousel when leaving the hub
   if (name !== 'hub') clearInterval(_ribbonTimer);
+  // Hide Portfolio Assistant FAB when not on hub; close popup
+  const aiFab = document.getElementById('ai-fab');
+  const aiPopup = document.getElementById('ai-chat-popup');
+  if (aiFab)   aiFab.style.display   = name === 'hub' ? 'flex' : 'none';
+  if (aiPopup) aiPopup.classList.remove('open');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -5927,9 +5946,22 @@ function insightRowHTML(ins) {
   </div>`;
 }
 
-// Render the full chat panel
+// Toggle the floating Portfolio Assistant popup
+function toggleInsightChat() {
+  const popup = document.getElementById('ai-chat-popup');
+  if (!popup) return;
+  const isOpen = popup.classList.contains('open');
+  popup.classList.toggle('open', !isOpen);
+  if (!isOpen) renderHubInsights(); // refresh on open
+}
+
+// Render the full chat panel (into floating popup)
 function renderHubInsights() {
-  const el = document.getElementById('hub-insights');
+  // Clear the inline hub placeholder (not used anymore)
+  const inlineEl = document.getElementById('hub-insights');
+  if (inlineEl) inlineEl.innerHTML = '';
+
+  const el = document.getElementById('ai-chat-inner');
   if (!el) return;
 
   const session = getSession();
@@ -5962,14 +5994,17 @@ function renderHubInsights() {
   </div>` : '';
 
   el.innerHTML = `
-    <div style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;">
-      <div style="padding:11px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;">
-        <div style="width:24px;height:24px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0176D3;">AI</div>
-        <span style="font-size:13px;font-weight:600;color:var(--gray-900);">Portfolio Assistant</span>
-        <span style="background:#ECFDF5;color:#059669;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:2px;">● Rule-based</span>
-        ${_insightHistory.length > 0 ? `<button onclick="_insightHistory=[];renderHubInsights();" style="margin-left:auto;background:none;border:none;font-size:11px;color:var(--gray-400);cursor:pointer;font-family:inherit;">Clear</button>` : ''}
+    <div style="display:flex;flex-direction:column;height:100%;">
+      <div style="background:#0176D3;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;">AI</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:white;">Portfolio Assistant</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.7);">Rule-based · your data only</div>
+        </div>
+        ${_insightHistory.length > 0 ? `<button onclick="_insightHistory=[];renderHubInsights();" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;padding:4px 10px;font-size:11px;color:white;cursor:pointer;font-family:inherit;">Clear</button>` : ''}
+        <button onclick="toggleInsightChat()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;width:28px;height:28px;color:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
       </div>
-      <div id="insight-chat-body" style="padding:14px;min-height:100px;max-height:320px;overflow-y:auto;">
+      <div id="insight-chat-body" style="flex:1;padding:14px;overflow-y:auto;">
         ${_insightHistory.length === 0
           ? `<div style="display:flex;gap:8px;align-items:flex-start;">
               <div style="width:28px;height:28px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;color:#0176D3;">AI</div>
@@ -5981,11 +6016,11 @@ function renderHubInsights() {
         }
       </div>
       ${chipsHTML}
-      <div style="padding:10px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;margin-top:${showChips ? '8px' : '0'};">
-        <input id="insight-chat-input" type="text" placeholder="Ask about your portfolio… e.g. How is my cashflow?"
+      <div style="padding:10px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;flex-shrink:0;">
+        <input id="insight-chat-input" type="text" placeholder="Ask about your portfolio…"
           onkeydown="if(event.key==='Enter')sendInsightMessage()"
           style="flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;color:var(--gray-800);">
-        <button onclick="sendInsightMessage()" style="background:#0176D3;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Send</button>
+        <button onclick="sendInsightMessage()" style="background:#0176D3;color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Send</button>
       </div>
     </div>`;
 
@@ -6030,8 +6065,22 @@ function renderHub() {
       <p>Your Launchpad — select a feature to get started.</p>`;
   }
 
-  // Portfolio insights (rule-based)
-  renderHubInsights();
+  // Portfolio Assistant FAB — show button and badge
+  const aiFab = document.getElementById('ai-fab');
+  if (aiFab) {
+    aiFab.style.display = 'flex';
+    const allInsights = computeInsights();
+    const urgentCount = allInsights.filter(i => i.level === 'danger' || i.level === 'warning').length;
+    const badge = document.getElementById('ai-fab-badge');
+    if (badge) {
+      if (urgentCount > 0) {
+        badge.textContent = urgentCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
 
   // Live stats
   const t = portfolioTotals();
