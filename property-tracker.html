@@ -5837,49 +5837,178 @@ function computeInsights() {
   return insights;
 }
 
+// ── Insight chat state ────────────────────────────────────────────────────────
+let _insightHistory = []; // [{ role:'ai'|'user', text, insights? }]
+
+const INSIGHT_CHIPS = [
+  'How is my cashflow?',
+  'Any leases expiring?',
+  'What is my LVR?',
+  'Am I at risk anywhere?',
+  'Show me everything',
+];
+
+// Match a user question to relevant insights (keyword intent engine)
+function matchInsightIntent(query) {
+  const q   = query.toLowerCase();
+  const all = computeInsights();
+  const order = ['danger','warning','info','success'];
+  all.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+
+  if (/cashflow|cash flow|profit|loss|losing|negativ|positiv|income/.test(q))
+    return { matched: all.filter(i => /cashflow/.test(i.title.toLowerCase())), topic: 'cashflow' };
+  if (/lease|expir|tenant|renew|leases/.test(q))
+    return { matched: all.filter(i => /lease|vacant|tenant/.test(i.title.toLowerCase())), topic: 'leases' };
+  if (/lvr|loan|debt|mortgage|leverage|borrow/.test(q))
+    return { matched: all.filter(i => /lvr|loan/.test(i.title.toLowerCase())), topic: 'LVR' };
+  if (/vacant|vacancy|empty|no tenant/.test(q))
+    return { matched: all.filter(i => /vacant/.test(i.title.toLowerCase())), topic: 'vacancy' };
+  if (/fixed|rate|refinanc|interest/.test(q))
+    return { matched: all.filter(i => /fixed rate/.test(i.title.toLowerCase())), topic: 'fixed rates' };
+  if (/insurance|insure|cover/.test(q))
+    return { matched: all.filter(i => /insurance/.test(i.title.toLowerCase())), topic: 'insurance' };
+  if (/yield|return|rent|rental/.test(q))
+    return { matched: all.filter(i => /yield|rent/.test(i.title.toLowerCase())), topic: 'yield' };
+  if (/expense|tax|record|log/.test(q))
+    return { matched: all.filter(i => /expense/.test(i.title.toLowerCase())), topic: 'expenses' };
+  if (/risk|danger|urgent|action|problem|issue/.test(q))
+    return { matched: all.filter(i => i.level === 'danger' || i.level === 'warning'), topic: 'risks' };
+  if (/all|everything|summar|overview|status|portfolio|how am i|health/.test(q))
+    return { matched: all, topic: 'summary' };
+
+  return { matched: all, topic: 'general' };
+}
+
+// Build a conversational reply from matched insights
+function buildInsightReply(query, matched, topic) {
+  const t = portfolioTotals();
+  if (!properties.length)
+    return "You haven't added any properties yet. Head to **Property Management** to get started — once you do, I'll start analysing your portfolio.";
+
+  if (!matched.length) {
+    const all = computeInsights();
+    if (!all.length) return `Your portfolio looks healthy! I found no issues to flag on **${topic}**. Keep your records up to date and I'll let you know if anything changes.`;
+    return `I didn't find any specific ${topic} alerts right now. Here's a quick summary instead: you have **${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}**, portfolio value **${fmt(t.totValue)}**, and cashflow is **${t.totCashflow >= 0 ? 'positive at ' + fmt(t.totCashflow) : 'negative at −' + fmt(Math.abs(t.totCashflow))}** per year.`;
+  }
+
+  const danger  = matched.filter(i => i.level === 'danger');
+  const warning = matched.filter(i => i.level === 'warning');
+  const info    = matched.filter(i => i.level === 'info');
+  const success = matched.filter(i => i.level === 'success');
+
+  let intro = '';
+  if (topic === 'summary' || topic === 'general')
+    intro = `Here's a full picture of your portfolio across **${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}**:`;
+  else if (danger.length)
+    intro = `I found **${danger.length} urgent item${danger.length !== 1 ? 's' : ''}** that need${danger.length === 1 ? 's' : ''} your attention on **${topic}**:`;
+  else if (warning.length)
+    intro = `A couple of things to keep an eye on for **${topic}**:`;
+  else if (success.length && !info.length)
+    intro = `Good news on **${topic}**!`;
+  else
+    intro = `Here's what I found on **${topic}**:`;
+
+  return intro;
+}
+
+// Render a single insight row inside the chat bubble
+function insightRowHTML(ins) {
+  const cfg = { danger:'#DC2626', warning:'#D97706', info:'#0176D3', success:'#059669' };
+  const bg  = { danger:'#FEF2F2', warning:'#FFF7ED', info:'#EFF6FF', success:'#ECFDF5' };
+  const lbl = { danger:'Action needed', warning:'Review', info:'Info', success:'Good' };
+  const c = cfg[ins.level], b = bg[ins.level];
+  return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:${b};border-radius:6px;margin-top:6px;">
+    <div style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;margin-top:4px;"></div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-900);">${ins.title}</div>
+      <div style="font-size:11px;color:var(--gray-500);line-height:1.5;margin-top:1px;">${ins.detail}</div>
+    </div>
+    <span style="font-size:10px;font-weight:600;color:${c};white-space:nowrap;flex-shrink:0;">${lbl[ins.level]}</span>
+  </div>`;
+}
+
+// Render the full chat panel
 function renderHubInsights() {
   const el = document.getElementById('hub-insights');
   if (!el) return;
 
-  const insights = computeInsights();
-  if (!insights.length) { el.innerHTML = ''; return; }
+  const session = getSession();
 
-  const levelCfg = {
-    danger:  { dot:'#DC2626', bg:'#FEF2F2', color:'#DC2626', label:'Action needed' },
-    warning: { dot:'#D97706', bg:'#FFF7ED', color:'#D97706', label:'Review'        },
-    info:    { dot:'#0176D3', bg:'#EFF6FF', color:'#0176D3', label:'Info'          },
-    success: { dot:'#059669', bg:'#ECFDF5', color:'#059669', label:'Good'          },
-  };
+  // Build messages HTML
+  function messagesHTML() {
+    if (!_insightHistory.length) return '';
+    return _insightHistory.map(msg => {
+      if (msg.role === 'user') {
+        return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <div style="background:#0176D3;color:white;border-radius:14px 14px 3px 14px;padding:9px 13px;font-size:13px;max-width:75%;line-height:1.5;">${msg.text}</div>
+        </div>`;
+      }
+      // AI message
+      const insRows = (msg.insights || []).map(insightRowHTML).join('');
+      const bodyText = msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      return `<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;color:#0176D3;">AI</div>
+        <div style="background:#F8FAFC;border:1px solid var(--gray-200);border-radius:3px 14px 14px 14px;padding:10px 13px;font-size:13px;color:var(--gray-800);max-width:85%;line-height:1.6;">
+          ${bodyText}${insRows}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-  const order = ['danger','warning','info','success'];
-  insights.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
-
-  const dangerCount  = insights.filter(i => i.level === 'danger').length;
-  const warningCount = insights.filter(i => i.level === 'warning').length;
-  const headerColor  = dangerCount  > 0 ? '#DC2626' : warningCount > 0 ? '#D97706' : '#0176D3';
-  const headerBg     = dangerCount  > 0 ? '#FEF2F2' : warningCount > 0 ? '#FFF7ED' : '#EFF6FF';
-  const shown = insights.slice(0, 6);
+  // Suggestion chips (only show when history is short)
+  const showChips = _insightHistory.length < 2;
+  const chipsHTML = showChips ? `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;">
+    ${INSIGHT_CHIPS.map(c => `<button onclick="sendInsightMessage('${c}')" style="background:#EFF6FF;border:1px solid #BFDBFE;color:#0176D3;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">${c}</button>`).join('')}
+  </div>` : '';
 
   el.innerHTML = `
     <div style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;">
-      <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;">
-        <svg width="15" height="15" fill="none" stroke="${headerColor}" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span style="font-size:13px;font-weight:600;color:var(--gray-900);">Portfolio Insights</span>
-        <span style="background:${headerBg};color:${headerColor};font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;">${insights.length} insight${insights.length !== 1 ? 's' : ''}</span>
+      <div style="padding:11px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0176D3;">AI</div>
+        <span style="font-size:13px;font-weight:600;color:var(--gray-900);">Portfolio Assistant</span>
+        <span style="background:#ECFDF5;color:#059669;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:2px;">● Rule-based</span>
+        ${_insightHistory.length > 0 ? `<button onclick="_insightHistory=[];renderHubInsights();" style="margin-left:auto;background:none;border:none;font-size:11px;color:var(--gray-400);cursor:pointer;font-family:inherit;">Clear</button>` : ''}
       </div>
-      ${shown.map(ins => {
-        const cfg = levelCfg[ins.level];
-        return `<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--gray-100);">
-          <div style="width:8px;height:8px;border-radius:50%;background:${cfg.dot};flex-shrink:0;margin-top:5px;"></div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:var(--gray-900);margin-bottom:2px;">${ins.title}</div>
-            <div style="font-size:12px;color:var(--gray-500);line-height:1.5;">${ins.detail}</div>
-          </div>
-          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${cfg.bg};color:${cfg.color};white-space:nowrap;flex-shrink:0;margin-top:2px;">${cfg.label}</span>
-        </div>`;
-      }).join('')}
-      ${insights.length > 6 ? `<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);text-align:center;">+ ${insights.length - 6} more insight${insights.length - 6 !== 1 ? 's' : ''}</div>` : ''}
+      <div id="insight-chat-body" style="padding:14px;min-height:100px;max-height:320px;overflow-y:auto;">
+        ${_insightHistory.length === 0
+          ? `<div style="display:flex;gap:8px;align-items:flex-start;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;color:#0176D3;">AI</div>
+              <div style="background:#F8FAFC;border:1px solid var(--gray-200);border-radius:3px 14px 14px 14px;padding:10px 13px;font-size:13px;color:var(--gray-800);line-height:1.6;">
+                Hi ${session ? (session.preferredName || session.firstName) : 'there'}! I'm your Portfolio Assistant. I analyse your property data using built-in rules and can answer questions about your portfolio. Try asking me something below.
+              </div>
+            </div>`
+          : messagesHTML()
+        }
+      </div>
+      ${chipsHTML}
+      <div style="padding:10px 14px;border-top:1px solid var(--gray-100);display:flex;gap:8px;margin-top:${showChips ? '8px' : '0'};">
+        <input id="insight-chat-input" type="text" placeholder="Ask about your portfolio… e.g. How is my cashflow?"
+          onkeydown="if(event.key==='Enter')sendInsightMessage()"
+          style="flex:1;border:1px solid var(--gray-200);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;color:var(--gray-800);">
+        <button onclick="sendInsightMessage()" style="background:#0176D3;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Send</button>
+      </div>
     </div>`;
+
+  // Scroll to bottom
+  const body = document.getElementById('insight-chat-body');
+  if (body) body.scrollTop = body.scrollHeight;
+}
+
+function sendInsightMessage(prefill) {
+  const input = document.getElementById('insight-chat-input');
+  const query = (prefill || (input ? input.value.trim() : '')).trim();
+  if (!query) return;
+  if (input) input.value = '';
+
+  // Add user message
+  _insightHistory.push({ role: 'user', text: query });
+
+  // Match intent and build reply
+  const { matched, topic } = matchInsightIntent(query);
+  const replyText = buildInsightReply(query, matched, topic);
+  _insightHistory.push({ role: 'ai', text: replyText, insights: matched });
+
+  renderHubInsights();
 }
 
 function renderHub() {
