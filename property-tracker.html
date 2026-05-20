@@ -5860,11 +5860,12 @@ function computeInsights() {
 let _insightHistory = []; // [{ role:'ai'|'user', text, insights? }]
 
 const INSIGHT_CHIPS = [
+  'What is my interest rate?',
   'How is my cashflow?',
   'Any leases expiring?',
   'What is my LVR?',
+  'List my properties',
   'Am I at risk anywhere?',
-  'Show me everything',
 ];
 
 // Match a user question to relevant insights (keyword intent engine)
@@ -5874,6 +5875,25 @@ function matchInsightIntent(query) {
   const order = ['danger','warning','info','success'];
   all.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
 
+  // ── Data queries: return raw property field values, not just alerts ──
+  if (/interest rate|what.*rate|rate.*property|my rate|current rate|what rate|interest.*paid/.test(q))
+    return { matched: [], topic: 'interest rates', dataQuery: 'rates' };
+  if (/repayment|monthly payment|loan payment|how much.*pay|what.*pay.*month/.test(q))
+    return { matched: [], topic: 'repayments', dataQuery: 'repayments' };
+  if (/lender|bank|who.*loan|loan.*with|borrow.*from/.test(q))
+    return { matched: [], topic: 'lenders', dataQuery: 'lenders' };
+  if (/loan.*amount|how much.*owe|outstanding.*loan|loan balance|loan.*value/.test(q))
+    return { matched: [], topic: 'loan amounts', dataQuery: 'loanAmounts' };
+  if (/property.*value|worth|current value|valuation|how much.*worth/.test(q))
+    return { matched: [], topic: 'property values', dataQuery: 'values' };
+  if (/weekly rent|monthly rent|how much.*rent|rent.*charge|rental income/.test(q))
+    return { matched: [], topic: 'rental income', dataQuery: 'rents' };
+  if (/fixed.*until|fixed.*expir|when.*fixed|fixed rate.*end/.test(q))
+    return { matched: [], topic: 'fixed rate expiry', dataQuery: 'fixedExpiry' };
+  if (/list.*propert|my propert|all propert|how many propert|which propert/.test(q))
+    return { matched: [], topic: 'properties', dataQuery: 'list' };
+
+  // ── Alert-based queries ──
   if (/cashflow|cash flow|profit|loss|losing|negativ|positiv|income/.test(q))
     return { matched: all.filter(i => /cashflow/.test(i.title.toLowerCase())), topic: 'cashflow' };
   if (/lease|expir|tenant|renew|leases/.test(q))
@@ -5896,6 +5916,79 @@ function matchInsightIntent(query) {
     return { matched: all, topic: 'summary' };
 
   return { matched: all, topic: 'general' };
+}
+
+// Build a direct data reply from raw property fields (no insights/alerts needed)
+function buildDataQueryReply(dataQuery) {
+  if (!properties.length) return "You haven't added any properties yet. Head to **Property Management** to get started.";
+
+  if (dataQuery === 'rates') {
+    const rows = properties.map(p => {
+      const rate   = p.rate       ? `**${p.rate}% p.a.**`          : 'not recorded';
+      const type   = p.loanType   ? ` (${p.loanType})`             : '';
+      const fixed  = p.fixedUntil ? `, fixed until ${p.fixedUntil}` : '';
+      return `• **${p.address}**: ${rate}${type}${fixed}`;
+    });
+    return `Here are the interest rates for your ${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'repayments') {
+    const rows = properties.map(p => {
+      const rep  = p.repayment ? `**${fmt(p.repayment)}/month**` : 'not recorded';
+      const type = p.loanType  ? ` (${p.loanType})`             : '';
+      return `• **${p.address}**: ${rep}${type}`;
+    });
+    return `Monthly repayments across your portfolio:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'lenders') {
+    const rows = properties.map(p => {
+      const lender = p.lender ? `**${p.lender}**` : 'not recorded';
+      return `• **${p.address}**: ${lender}`;
+    });
+    return `Lenders for your properties:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'loanAmounts') {
+    const rows = properties.map(p => {
+      const loan = p.loanAmount ? `**${fmt(p.loanAmount)}**` : 'not recorded';
+      return `• **${p.address}**: ${loan}`;
+    });
+    return `Outstanding loan amounts:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'values') {
+    const total = properties.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+    const rows  = properties.map(p => {
+      const val = p.value ? `**${fmt(p.value)}**` : 'not recorded';
+      return `• **${p.address}**: ${val}`;
+    });
+    return `Property values:\n\n${rows.join('\n')}\n\n**Total portfolio value: ${fmt(total)}**`;
+  }
+
+  if (dataQuery === 'rents') {
+    const rows = properties.map(p => {
+      const weekly   = p.weeklyRent ? `**${fmt(p.weeklyRent)}/wk**` : 'not recorded';
+      const monthly  = p.weeklyRent ? ` (${fmt(p.weeklyRent * 52 / 12)}/mo)` : '';
+      return `• **${p.address}**: ${weekly}${monthly}`;
+    });
+    return `Weekly rental income for your properties:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'fixedExpiry') {
+    const hasFixed = properties.filter(p => p.loanType && p.loanType.toLowerCase().includes('fixed') && p.fixedUntil);
+    if (!hasFixed.length) return "None of your properties have a recorded fixed rate expiry date. You can add this in **Property Management**.";
+    const rows = hasFixed.map(p => `• **${p.address}**: fixed rate expires **${p.fixedUntil}**${p.rate ? ` at ${p.rate}%` : ''}`);
+    return `Fixed rate expiry dates:\n\n${rows.join('\n')}`;
+  }
+
+  if (dataQuery === 'list') {
+    const t = portfolioTotals();
+    const rows = properties.map((p, idx) => `${idx + 1}. **${p.address}**${p.value ? ' — ' + fmt(p.value) : ''}`);
+    return `You have **${properties.length} propert${properties.length !== 1 ? 'ies' : 'y'}** in your portfolio:\n\n${rows.join('\n')}\n\n**Total value:** ${fmt(t.totValue)} · **Annual cashflow:** ${t.totCashflow >= 0 ? '+' + fmt(t.totCashflow) : '−' + fmt(Math.abs(t.totCashflow))}`;
+  }
+
+  return null; // unrecognised dataQuery — fall through to alert-based reply
 }
 
 // Build a conversational reply from matched insights
@@ -6038,11 +6131,21 @@ function sendInsightMessage(prefill) {
   // Add user message
   _insightHistory.push({ role: 'user', text: query });
 
-  // Match intent and build reply
-  const { matched, topic } = matchInsightIntent(query);
-  const replyText = buildInsightReply(query, matched, topic);
-  _insightHistory.push({ role: 'ai', text: replyText, insights: matched });
+  // Match intent — may return a dataQuery flag for direct property field lookups
+  const { matched, topic, dataQuery } = matchInsightIntent(query);
 
+  let replyText, replyInsights;
+  if (dataQuery) {
+    // Direct data query — read raw property fields instead of alerts
+    const dataReply = buildDataQueryReply(dataQuery);
+    replyText    = dataReply !== null ? dataReply : buildInsightReply(query, matched, topic);
+    replyInsights = [];
+  } else {
+    replyText    = buildInsightReply(query, matched, topic);
+    replyInsights = matched;
+  }
+
+  _insightHistory.push({ role: 'ai', text: replyText, insights: replyInsights });
   renderHubInsights();
 }
 
