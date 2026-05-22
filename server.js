@@ -183,6 +183,7 @@ function sanitizeUser(u) {
     preferredName: u.preferred_name,
     advisorId:     u.advisor_id,
     createdAt:     u.created_at,
+    lastLogin:     u.last_login,
   };
 }
 
@@ -714,7 +715,7 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     { data: usersWithIncome },
     { data: usersWithExpenses },
   ] = await Promise.all([
-    supabase.from('users').select('id, role, status, plan, advisor_id, created_at, first_name, last_name, email').order('created_at', { ascending: false }),
+    supabase.from('users').select('id, role, status, plan, advisor_id, created_at, first_name, last_name, email, company, last_login').order('created_at', { ascending: false }),
     supabase.from('properties').select('id, user_id, value, loan, state, type'),
     supabase.from('messages').select('*', { count: 'exact', head: true }),
     supabase.from('income_log').select('*', { count: 'exact', head: true }),
@@ -1071,6 +1072,73 @@ app.post('/api/marketing/campaigns/:id/send', requireAdmin, async (req, res) => 
 
     console.log(`📧  Campaign "${campaign.title}" sent to ${sent} recipients (${failed} failed)`);
     res.json({ success: true, sent, failed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/marketing/users/:userId/campaigns — campaigns sent to a specific user
+app.get('/api/marketing/users/:userId/campaigns', requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Get the user to know their plan, last_login
+    const { data: user, error: uErr } = await supabase
+      .from('users').select('id, email, first_name, last_name, plan, last_login, status')
+      .eq('id', userId).single();
+    if (uErr || !user) return res.status(404).json({ error: 'User not found' });
+
+    // Get their property count
+    const { data: props } = await supabase
+      .from('properties').select('id').eq('user_id', userId);
+    const propCount = (props || []).length;
+
+    // Get all sent campaigns
+    const { data: campaigns } = await supabase
+      .from('marketing_campaigns')
+      .select('id, title, subject, segment, status, recipient_count, sent_at, created_at')
+      .eq('status', 'sent')
+      .order('sent_at', { ascending: false });
+
+    // Check which campaigns this user would have qualified for
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const isActive = user.last_login && user.last_login >= cutoff;
+
+    const receivedCampaigns = (campaigns || []).filter(c => {
+      const seg = c.segment || {};
+
+      // Plan check
+      if (seg.plans && seg.plans.length > 0 && !seg.plans.includes(user.plan || 'free')) return false;
+
+      // Activity check
+      if (seg.activity === 'active' && !isActive) return false;
+      if (seg.activity === 'inactive' && isActive) return false;
+
+      // Property count check
+      if (seg.propCount === 'none' && propCount > 0) return false;
+      if (seg.propCount === 'some' && (propCount < 1 || propCount > 2)) return false;
+      if (seg.propCount === 'many' && propCount < 3) return false;
+
+      return true;
+    });
+
+    // Determine which segments the user currently qualifies for (for the 360 view)
+    const segmentMembership = [];
+    if (user.plan === 'free') segmentMembership.push('Free Plan');
+    if (user.plan === 'investor') segmentMembership.push('Investor Plan');
+    if (user.plan === 'portfolio') segmentMembership.push('Portfolio Plan');
+    if (isActive) segmentMembership.push('Active (last 30 days)');
+    else segmentMembership.push('Inactive (30+ days)');
+    if (propCount === 0) segmentMembership.push('No properties');
+    else if (propCount <= 2) segmentMembership.push(`${propCount} propert${propCount === 1 ? 'y' : 'ies'}`);
+    else segmentMembership.push(`${propCount} properties (power user)`);
+
+    res.json({
+      campaigns: receivedCampaigns,
+      segmentMembership,
+      lastContacted: receivedCampaigns.length > 0 ? receivedCampaigns[0].sent_at : null,
+      propertyCount: propCount,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
