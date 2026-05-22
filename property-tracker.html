@@ -2632,6 +2632,12 @@
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           Marketing
         </button>
+        <button id="admin-tab-airules" onclick="switchAdminTab('airules')"
+          style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+          Agent AI
+          <span id="airules-pending-badge" style="display:none;background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;"></span>
+        </button>
         <button id="admin-tab-system" onclick="switchAdminTab('system')"
           style="padding:8px 18px;border:none;border-radius:7px;background:transparent;font-size:12px;font-weight:600;color:var(--gray-400);cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s;">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -3145,6 +3151,39 @@
         </div>
 
       </div><!-- end admin-panel-marketing -->
+
+      <!-- ── TAB 5: AGENT AI RULE MANAGEMENT ── -->
+      <div id="admin-panel-airules" style="display:none;">
+
+        <!-- Pending Suggestions -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <div>
+            <span class="section-title">Pending Suggestions</span>
+            <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Queries customers asked that didn't match any rule</span>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="loadAiRules()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.53-5.2"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div class="detail-card" style="padding:0;overflow:hidden;margin-bottom:32px;">
+          <div id="ai-suggestions-container">
+            <div style="padding:40px;text-align:center;color:var(--gray-400);">Loading suggestions…</div>
+          </div>
+        </div>
+
+        <!-- Active Custom Rules -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Active Custom Rules</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Admin-approved rules that extend the Portfolio Assistant</span>
+        </div>
+        <div class="detail-card" style="padding:0;overflow:hidden;">
+          <div id="ai-rules-container">
+            <div style="padding:40px;text-align:center;color:var(--gray-400);">Loading rules…</div>
+          </div>
+        </div>
+
+      </div><!-- end admin-panel-airules -->
 
       <!-- ── TAB 4: SYSTEM ADMIN ── -->
       <div id="admin-panel-system" style="display:none;">
@@ -3854,6 +3893,76 @@
   </div>
 </div>
 
+<!-- APPROVE AI RULE MODAL -->
+<div class="modal-overlay" id="ai-rule-modal-overlay" onclick="if(event.target===this)closeAiRuleModal()">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <h3 id="ai-rule-modal-title">Approve Rule</h3>
+      <button class="modal-close" onclick="closeAiRuleModal()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;">
+      <input type="hidden" id="ai-rule-suggestion-id">
+      <input type="hidden" id="ai-rule-id">
+
+      <!-- Customer query preview -->
+      <div id="ai-rule-query-preview" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;padding:12px 14px;margin-bottom:18px;display:none;">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">Customer asked:</div>
+        <div id="ai-rule-query-text" style="font-size:14px;font-weight:600;color:var(--gray-800);font-style:italic;"></div>
+        <div id="ai-rule-query-meta" style="font-size:11px;color:var(--gray-400);margin-top:4px;"></div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Rule Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="ai-rule-name" class="auth-input" placeholder="e.g. Offset account balance query">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Trigger Keywords <span style="color:var(--danger)">*</span>
+          <span style="font-weight:400;color:var(--gray-400);font-size:11px;margin-left:6px;">comma-separated, e.g. offset, redraw, buffer</span>
+        </label>
+        <input type="text" id="ai-rule-pattern" class="auth-input" placeholder="offset, redraw balance, buffer account">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Response Type <span style="color:var(--danger)">*</span></label>
+        <select id="ai-rule-type" class="auth-input" onchange="onAiRuleTypeChange()">
+          <option value="data">Data Query — return property field data</option>
+          <option value="custom">Custom Response — write a specific reply</option>
+        </select>
+      </div>
+      <!-- Data query sub-options -->
+      <div id="ai-rule-data-section" class="form-group" style="margin-bottom:14px;">
+        <label>Data Field to Return</label>
+        <select id="ai-rule-data-query" class="auth-input">
+          <option value="rates">Interest Rates</option>
+          <option value="repayments">Repayments</option>
+          <option value="lenders">Lenders / Banks</option>
+          <option value="loanAmounts">Loan Amounts</option>
+          <option value="values">Property Values</option>
+          <option value="rents">Rental Income</option>
+          <option value="fixedExpiry">Fixed Rate Expiry Dates</option>
+          <option value="list">Property List</option>
+        </select>
+      </div>
+      <!-- Custom response text -->
+      <div id="ai-rule-custom-section" class="form-group" style="margin-bottom:14px;display:none;">
+        <label>Custom Reply Text <span style="color:var(--danger)">*</span>
+          <span style="font-weight:400;color:var(--gray-400);font-size:11px;margin-left:6px;">What the assistant should say when this is asked</span>
+        </label>
+        <textarea id="ai-rule-custom-response" class="auth-input" rows="4" placeholder="e.g. We don't currently track offset account balances. Please check your bank app or contact your lender directly." style="resize:vertical;"></textarea>
+      </div>
+      <div id="ai-rule-modal-error" style="display:none;background:var(--danger-light);color:var(--danger);border-radius:6px;padding:10px 14px;font-size:13px;margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAiRuleModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAiRule()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Rule
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- RESET PASSWORD MODAL (admin only) -->
 <div class="modal-overlay" id="reset-pw-modal-overlay" onclick="if(event.target===this)closeResetPasswordModal()">
   <div class="modal" style="max-width:420px;">
@@ -4246,6 +4355,8 @@ async function authLogin() {
     if (data.user.role === 'admin' || data.user.role === 'advisor') {
       await refreshAdminCache();
     }
+    // Load custom AI rules so Portfolio Assistant can use them immediately
+    loadCustomAiRules();
     initApp();
   } catch (err) {
     errEl.textContent = err.message;
@@ -5011,9 +5122,238 @@ function showAdvisorClientReport(clientId, fy) {
   document.body.appendChild(overlay);
 }
 
+// ── AGENT AI RULE MANAGEMENT ──────────────────────────────────────────────────
+
+// Loaded at startup — custom rules from Supabase extend the built-in intent engine
+let _customAiRules = [];
+
+async function loadCustomAiRules() {
+  try {
+    const rules = await apiCall('GET', '/ai-rules');
+    _customAiRules = Array.isArray(rules) ? rules.filter(r => r.active) : [];
+  } catch(e) {
+    _customAiRules = [];
+  }
+}
+
+// Log an unmatched query to backend (silently — no UI feedback)
+function logUnmatchedQuery(query) {
+  const session = getSession();
+  if (!session) return;
+  apiCall('POST', '/ai-rules/suggestions', { query, userId: session.id }).catch(() => {});
+}
+
+// Admin: load suggestions + active rules
+async function loadAiRules() {
+  loadAiSuggestions();
+  loadAiActiveRules();
+}
+
+async function loadAiSuggestions() {
+  const el = document.getElementById('ai-suggestions-container');
+  if (!el) return;
+  try {
+    const suggestions = await apiCall('GET', '/ai-rules/suggestions');
+    const badge = document.getElementById('airules-pending-badge');
+    if (badge) {
+      if (suggestions.length > 0) {
+        badge.textContent = suggestions.length;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    if (!suggestions.length) {
+      el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;display:block;opacity:0.4;"><path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z"/><path d="M12 8v4m0 4h.01"/></svg>
+        No unmatched queries yet. When customers ask something the assistant can't answer, it will appear here.
+      </div>`;
+      return;
+    }
+    el.innerHTML = `<table class="admin-user-table">
+      <thead><tr>
+        <th>Customer Query</th><th style="text-align:center;">Asked</th><th>Last Asked</th><th style="text-align:center;">By Users</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${suggestions.map(s => `
+        <tr>
+          <td style="max-width:260px;">
+            <div style="font-weight:600;font-size:13px;color:var(--gray-800);">"${escHtml(s.query)}"</div>
+          </td>
+          <td style="text-align:center;">
+            <span class="stat-badge" style="background:var(--primary-light);color:var(--primary-dark);border:1px solid #9EC8F5;">${s.asked_count}×</span>
+          </td>
+          <td style="font-size:12px;color:var(--gray-500);">${s.last_asked_at ? new Date(s.last_asked_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '–'}</td>
+          <td style="text-align:center;font-size:12px;color:var(--gray-600);">${(s.user_ids||[]).length}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="openAiRuleModal(null,'${escHtml(s.id)}','${escHtml(s.query).replace(/'/g,"\\'")}',${s.asked_count})">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Approve
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="dismissAiSuggestion('${s.id}')">Dismiss</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;color:var(--danger);">Failed to load suggestions: ${e.message}</div>`;
+  }
+}
+
+async function loadAiActiveRules() {
+  const el = document.getElementById('ai-rules-container');
+  if (!el) return;
+  try {
+    const rules = await apiCall('GET', '/ai-rules');
+    if (!rules.length) {
+      el.innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">
+        No custom rules yet. Approve suggestions above to add your first rule.
+      </div>`;
+      return;
+    }
+    const dataQueryLabels = {
+      rates:'Interest Rates', repayments:'Repayments', lenders:'Lenders',
+      loanAmounts:'Loan Amounts', values:'Property Values', rents:'Rental Income',
+      fixedExpiry:'Fixed Rate Expiry', list:'Property List'
+    };
+    el.innerHTML = `<table class="admin-user-table">
+      <thead><tr>
+        <th>Rule Name</th><th>Keywords</th><th>Response Type</th><th>Status</th><th>Created</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${rules.map(r => `
+        <tr>
+          <td><strong>${escHtml(r.name)}</strong></td>
+          <td style="max-width:200px;"><code style="font-size:11px;background:var(--gray-50);padding:2px 6px;border-radius:4px;">${escHtml(r.pattern)}</code></td>
+          <td style="font-size:12px;">
+            ${r.data_query
+              ? `<span class="stat-badge" style="background:#EDE9FE;color:#5B21B6;border:1px solid #C4B5FD;">Data: ${dataQueryLabels[r.data_query]||r.data_query}</span>`
+              : `<span class="stat-badge" style="background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;">Custom Reply</span>`}
+          </td>
+          <td>
+            ${r.active
+              ? `<span class="stat-badge badge-green">Active</span>`
+              : `<span class="stat-badge badge-red">Inactive</span>`}
+          </td>
+          <td style="font-size:12px;color:var(--gray-500);">${r.created_at ? new Date(r.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '–'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-outline btn-sm" style="margin-right:4px;" onclick="openAiRuleModal('${r.id}',null,'','',${JSON.stringify(r).replace(/'/g,"\\'")})">Edit</button>
+            <button class="btn btn-outline btn-sm" onclick="deleteAiRule('${r.id}')">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;color:var(--danger);">Failed to load rules.</div>`;
+  }
+}
+
+function openAiRuleModal(ruleId, suggestionId, queryText, askedCount, existingRule) {
+  // Reset form
+  document.getElementById('ai-rule-id').value            = ruleId || '';
+  document.getElementById('ai-rule-suggestion-id').value = suggestionId || '';
+  document.getElementById('ai-rule-modal-error').style.display = 'none';
+
+  if (existingRule && typeof existingRule === 'object') {
+    // Edit existing rule
+    document.getElementById('ai-rule-modal-title').textContent = 'Edit Rule';
+    document.getElementById('ai-rule-name').value         = existingRule.name || '';
+    document.getElementById('ai-rule-pattern').value      = existingRule.pattern || '';
+    document.getElementById('ai-rule-type').value         = existingRule.data_query ? 'data' : 'custom';
+    document.getElementById('ai-rule-data-query').value   = existingRule.data_query || 'rates';
+    document.getElementById('ai-rule-custom-response').value = existingRule.custom_response || '';
+    document.getElementById('ai-rule-query-preview').style.display = 'none';
+  } else {
+    // Approve new suggestion
+    document.getElementById('ai-rule-modal-title').textContent = 'Approve as Rule';
+    document.getElementById('ai-rule-name').value         = '';
+    document.getElementById('ai-rule-pattern').value      = '';
+    document.getElementById('ai-rule-type').value         = 'data';
+    document.getElementById('ai-rule-data-query').value   = 'rates';
+    document.getElementById('ai-rule-custom-response').value = '';
+    if (queryText) {
+      document.getElementById('ai-rule-query-preview').style.display = '';
+      document.getElementById('ai-rule-query-text').textContent = queryText;
+      document.getElementById('ai-rule-query-meta').textContent = `Asked ${askedCount||1} time${(askedCount||1)!==1?'s':''}`;
+    } else {
+      document.getElementById('ai-rule-query-preview').style.display = 'none';
+    }
+  }
+  onAiRuleTypeChange();
+  document.getElementById('ai-rule-modal-overlay').classList.add('open');
+}
+
+function closeAiRuleModal() {
+  document.getElementById('ai-rule-modal-overlay').classList.remove('open');
+}
+
+function onAiRuleTypeChange() {
+  const type = document.getElementById('ai-rule-type').value;
+  document.getElementById('ai-rule-data-section').style.display   = type === 'data'   ? '' : 'none';
+  document.getElementById('ai-rule-custom-section').style.display = type === 'custom' ? '' : 'none';
+}
+
+async function saveAiRule() {
+  const errEl = document.getElementById('ai-rule-modal-error');
+  errEl.style.display = 'none';
+  const ruleId      = document.getElementById('ai-rule-id').value.trim();
+  const suggId      = document.getElementById('ai-rule-suggestion-id').value.trim();
+  const name        = document.getElementById('ai-rule-name').value.trim();
+  const pattern     = document.getElementById('ai-rule-pattern').value.trim();
+  const type        = document.getElementById('ai-rule-type').value;
+  const dataQuery   = type === 'data'   ? document.getElementById('ai-rule-data-query').value : null;
+  const customResp  = type === 'custom' ? document.getElementById('ai-rule-custom-response').value.trim() : null;
+
+  if (!name)    { errEl.textContent = 'Rule name is required.'; errEl.style.display=''; return; }
+  if (!pattern) { errEl.textContent = 'Trigger keywords are required.'; errEl.style.display=''; return; }
+  if (type === 'custom' && !customResp) { errEl.textContent = 'Custom reply text is required.'; errEl.style.display=''; return; }
+
+  try {
+    const payload = { name, pattern, dataQuery, customResponse: customResp, suggestionId: suggId || undefined };
+    if (ruleId) {
+      await apiCall('PUT', `/ai-rules/${ruleId}`, payload);
+    } else {
+      await apiCall('POST', '/ai-rules', payload);
+    }
+    closeAiRuleModal();
+    loadAiRules();
+    await loadCustomAiRules(); // Refresh runtime rules so assistant picks up change immediately
+    showToast('Rule saved — assistant updated!', 'success');
+  } catch(e) {
+    errEl.textContent = e.message || 'Failed to save rule.';
+    errEl.style.display = '';
+  }
+}
+
+async function dismissAiSuggestion(id) {
+  if (!confirm('Dismiss this suggestion?')) return;
+  try {
+    await apiCall('DELETE', `/ai-rules/suggestions/${id}`);
+    loadAiSuggestions();
+    showToast('Suggestion dismissed');
+  } catch(e) {
+    showToast('Failed to dismiss', 'error');
+  }
+}
+
+async function deleteAiRule(id) {
+  if (!confirm('Delete this rule? The assistant will no longer use it.')) return;
+  try {
+    await apiCall('DELETE', `/ai-rules/${id}`);
+    loadAiRules();
+    await loadCustomAiRules();
+    showToast('Rule deleted');
+  } catch(e) {
+    showToast('Failed to delete rule', 'error');
+  }
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── ADMIN ────────────────────────────────────────────────────────────────────
 function switchAdminTab(tab) {
-  ['users','business','marketing','system'].forEach(t => {
+  ['users','business','marketing','airules','system'].forEach(t => {
     const panel = document.getElementById('admin-panel-' + t);
     const btn   = document.getElementById('admin-tab-' + t);
     if (panel) panel.style.display = (t === tab) ? '' : 'none';
@@ -5032,6 +5372,7 @@ function switchAdminTab(tab) {
   if (tab === 'system' || tab === 'business' || tab === 'marketing') loadSystemStats();
   if (tab === 'business') loadAdminCategories();
   if (tab === 'marketing') loadMarketingCampaigns();
+  if (tab === 'airules') loadAiRules();
 }
 
 async function sendTestEmail() {
@@ -6597,6 +6938,16 @@ function matchInsightIntent(query) {
   const order = ['danger','warning','info','success'];
   all.sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
 
+  // ── Custom admin-approved rules (loaded from Supabase at startup) ──
+  for (const rule of _customAiRules) {
+    const keywords = rule.pattern.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+    const matched = keywords.some(k => q.includes(k));
+    if (matched) {
+      if (rule.data_query) return { matched: [], topic: rule.name, dataQuery: rule.data_query };
+      return { matched: [], topic: rule.name, customResponse: rule.custom_response };
+    }
+  }
+
   // ── Data queries: return raw property field values, not just alerts ──
   if (/interest rate|what.*rate|rate.*property|my rate|current rate|what rate|interest.*paid/.test(q))
     return { matched: [], topic: 'interest rates', dataQuery: 'rates' };
@@ -6637,7 +6988,9 @@ function matchInsightIntent(query) {
   if (/all|everything|summar|overview|status|portfolio|how am i|health/.test(q))
     return { matched: all, topic: 'summary' };
 
-  return { matched: all, topic: 'general' };
+  // Nothing matched — log for Admin review
+  logUnmatchedQuery(query);
+  return { matched: all, topic: 'general', unmatched: true };
 }
 
 // Find a specific property mentioned by name in the query (fuzzy word match)
@@ -6898,11 +7251,15 @@ function sendInsightMessage(prefill) {
   // Add user message
   _insightHistory.push({ role: 'user', text: query });
 
-  // Match intent — may return a dataQuery flag for direct property field lookups
-  const { matched, topic, dataQuery } = matchInsightIntent(query);
+  // Match intent — may return a dataQuery flag, customResponse, or fall back to alerts
+  const { matched, topic, dataQuery, customResponse } = matchInsightIntent(query);
 
   let replyText, replyInsights;
-  if (dataQuery) {
+  if (customResponse) {
+    // Admin-defined custom text response
+    replyText     = customResponse;
+    replyInsights = [];
+  } else if (dataQuery) {
     // Direct data query — read raw property fields instead of alerts
     const dataReply = buildDataQueryReply(dataQuery, query);
     replyText    = dataReply !== null ? dataReply : buildInsightReply(query, matched, topic);

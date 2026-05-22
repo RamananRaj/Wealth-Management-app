@@ -1077,6 +1077,127 @@ app.post('/api/marketing/campaigns/:id/send', requireAdmin, async (req, res) => 
   }
 });
 
+// ─────────────────────────────────────────────────────────────────
+// AGENT AI RULE MANAGEMENT
+// ─────────────────────────────────────────────────────────────────
+
+// POST /api/ai-rules/suggestions — log an unmatched customer query
+app.post('/api/ai-rules/suggestions', requireAuth, async (req, res) => {
+  const { query, userId } = req.body;
+  if (!query || query.length < 3) return res.json({ ok: true }); // ignore trivial queries
+
+  const normalised = query.trim().toLowerCase().slice(0, 300);
+
+  // Check if this exact query already exists
+  const { data: existing } = await supabase
+    .from('ai_rule_suggestions')
+    .select('id, asked_count, user_ids')
+    .eq('query', normalised)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (existing) {
+    // Increment count and add user if not already in list
+    const userIds = existing.user_ids || [];
+    if (!userIds.includes(userId)) userIds.push(userId);
+    await supabase.from('ai_rule_suggestions').update({
+      asked_count:  existing.asked_count + 1,
+      user_ids:     userIds,
+      last_asked_at: new Date().toISOString(),
+    }).eq('id', existing.id);
+  } else {
+    await supabase.from('ai_rule_suggestions').insert({
+      id:            require('crypto').randomUUID(),
+      query:         normalised,
+      user_ids:      userId ? [userId] : [],
+      asked_count:   1,
+      first_asked_at: new Date().toISOString(),
+      last_asked_at:  new Date().toISOString(),
+      status:        'pending',
+    });
+  }
+  res.json({ ok: true });
+});
+
+// GET /api/ai-rules/suggestions — list pending suggestions (admin)
+app.get('/api/ai-rules/suggestions', requireAdmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from('ai_rule_suggestions')
+    .select('*')
+    .eq('status', 'pending')
+    .order('asked_count', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// DELETE /api/ai-rules/suggestions/:id — dismiss suggestion (admin)
+app.delete('/api/ai-rules/suggestions/:id', requireAdmin, async (req, res) => {
+  await supabase.from('ai_rule_suggestions')
+    .update({ status: 'dismissed' })
+    .eq('id', req.params.id);
+  res.json({ success: true });
+});
+
+// GET /api/ai-rules — list active custom rules (all authenticated users, for assistant)
+app.get('/api/ai-rules', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('ai_rules')
+    .select('id, name, pattern, topic, data_query, custom_response, active, created_at')
+    .eq('active', true)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// POST /api/ai-rules — create new rule and mark suggestion as approved (admin)
+app.post('/api/ai-rules', requireAdmin, async (req, res) => {
+  const { name, pattern, dataQuery, customResponse, suggestionId } = req.body;
+  if (!name || !pattern) return res.status(400).json({ error: 'Name and pattern are required.' });
+
+  const id = require('crypto').randomUUID();
+  const { error } = await supabase.from('ai_rules').insert({
+    id,
+    name,
+    pattern,
+    topic:           name,
+    data_query:      dataQuery || null,
+    custom_response: customResponse || null,
+    active:          true,
+    created_by:      req.user.id,
+    created_at:      new Date().toISOString(),
+    updated_at:      new Date().toISOString(),
+  });
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Mark the originating suggestion as approved
+  if (suggestionId) {
+    await supabase.from('ai_rule_suggestions')
+      .update({ status: 'approved' })
+      .eq('id', suggestionId);
+  }
+
+  res.json({ success: true, id });
+});
+
+// PUT /api/ai-rules/:id — update rule (admin)
+app.put('/api/ai-rules/:id', requireAdmin, async (req, res) => {
+  const { name, pattern, dataQuery, customResponse } = req.body;
+  const updates = { updated_at: new Date().toISOString() };
+  if (name           !== undefined) updates.name            = name;
+  if (pattern        !== undefined) updates.pattern         = pattern;
+  if (dataQuery      !== undefined) updates.data_query      = dataQuery || null;
+  if (customResponse !== undefined) updates.custom_response = customResponse || null;
+  const { error } = await supabase.from('ai_rules').update(updates).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// DELETE /api/ai-rules/:id — delete rule (admin)
+app.delete('/api/ai-rules/:id', requireAdmin, async (req, res) => {
+  await supabase.from('ai_rules').delete().eq('id', req.params.id);
+  res.json({ success: true });
+});
+
 // GET /api/marketing/users/:userId/campaigns — campaigns sent to a specific user
 app.get('/api/marketing/users/:userId/campaigns', requireAdmin, async (req, res) => {
   try {
