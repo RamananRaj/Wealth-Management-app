@@ -134,19 +134,36 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           stripe_subscription_id: session.subscription,
           updated_at: new Date().toISOString(),
         }).eq('id', userId);
+        // Sync to CRM
+        await syncCrmCustomer(userId, {
+          stripeCustomerId:    session.customer,
+          stripeSubscriptionId: session.subscription,
+          stripePlan:          plan,
+          stripeStatus:        'active',
+          subscribedAt:        new Date().toISOString(),
+        });
         console.log(`✅  Plan upgraded: user ${userId} → ${plan}`);
       }
       break;
     }
+    case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub = event.data.object;
       const priceId = sub.items.data[0]?.price?.id;
       const newPlan = Object.entries(PLAN_PRICES).find(([, pid]) => pid === priceId)?.[0];
-      if (newPlan) {
-        const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', sub.customer);
-        if (users?.length) {
+      const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', sub.customer);
+      if (users?.length) {
+        if (newPlan) {
           await supabase.from('users').update({ plan: newPlan, updated_at: new Date().toISOString() }).eq('id', users[0].id);
         }
+        await syncCrmCustomer(users[0].id, {
+          stripeSubscriptionId: sub.id,
+          stripeStatus:        sub.status,
+          stripePlan:          newPlan,
+          nextBillingAt:       sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+          trialEndsAt:         sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+          cancelledAt:         sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+        });
       }
       break;
     }
@@ -155,12 +172,79 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', sub.customer);
       if (users?.length) {
         await supabase.from('users').update({ plan: 'free', updated_at: new Date().toISOString() }).eq('id', users[0].id);
+        await syncCrmCustomer(users[0].id, {
+          stripeStatus: 'cancelled',
+          stripePlan:   'free',
+          cancelledAt:  new Date().toISOString(),
+        });
+      }
+      break;
+    }
+    case 'invoice.payment_succeeded': {
+      const inv = event.data.object;
+      const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', inv.customer);
+      if (users?.length) {
+        // Get payment method details
+        let cardBrand = null, cardLast4 = null, cardExpMonth = null, cardExpYear = null;
+        try {
+          const pmId = inv.payment_intent ? (await stripe.paymentIntents.retrieve(inv.payment_intent)).payment_method : null;
+          if (pmId) {
+            const pm = await stripe.paymentMethods.retrieve(pmId);
+            cardBrand    = pm.card?.brand;
+            cardLast4    = pm.card?.last4;
+            cardExpMonth = pm.card?.exp_month;
+            cardExpYear  = pm.card?.exp_year;
+          }
+        } catch(e) { /* non-critical */ }
+        await syncCrmCustomer(users[0].id, {
+          lastPaymentAt:     new Date(inv.created * 1000).toISOString(),
+          lastPaymentAmount: inv.amount_paid,
+          stripeStatus:      'active',
+          cardBrand, cardLast4, cardExpMonth, cardExpYear,
+        });
+      }
+      break;
+    }
+    case 'invoice.payment_failed': {
+      const inv = event.data.object;
+      const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', inv.customer);
+      if (users?.length) {
+        await syncCrmCustomer(users[0].id, { stripeStatus: 'past_due' });
       }
       break;
     }
   }
   res.json({ received: true });
 });
+
+// Helper: upsert a CRM customer record
+async function syncCrmCustomer(userId, fields) {
+  if (!userId) return;
+  const { data: user } = await supabase.from('users').select('id, email, stripe_customer_id, stripe_subscription_id, created_at').eq('id', userId).single();
+  if (!user) return;
+  const updates = {
+    id:         userId,
+    user_id:    userId,
+    email:      user.email,
+    created_at: user.created_at,
+    updated_at: new Date().toISOString(),
+  };
+  if (fields.stripeCustomerId    !== undefined) updates.stripe_customer_id     = fields.stripeCustomerId    || user.stripe_customer_id;
+  if (fields.stripeSubscriptionId !== undefined) updates.stripe_subscription_id = fields.stripeSubscriptionId;
+  if (fields.stripeStatus        !== undefined) updates.stripe_status          = fields.stripeStatus;
+  if (fields.stripePlan          !== undefined) updates.stripe_plan            = fields.stripePlan;
+  if (fields.lastPaymentAt       !== undefined) updates.last_payment_at        = fields.lastPaymentAt;
+  if (fields.lastPaymentAmount   !== undefined) updates.last_payment_amount    = fields.lastPaymentAmount;
+  if (fields.nextBillingAt       !== undefined) updates.next_billing_at        = fields.nextBillingAt;
+  if (fields.cardBrand           !== undefined) updates.card_brand             = fields.cardBrand;
+  if (fields.cardLast4           !== undefined) updates.card_last4             = fields.cardLast4;
+  if (fields.cardExpMonth        !== undefined) updates.card_exp_month         = fields.cardExpMonth;
+  if (fields.cardExpYear         !== undefined) updates.card_exp_year          = fields.cardExpYear;
+  if (fields.trialEndsAt         !== undefined) updates.trial_ends_at          = fields.trialEndsAt;
+  if (fields.subscribedAt        !== undefined) updates.subscribed_at          = fields.subscribedAt;
+  if (fields.cancelledAt         !== undefined) updates.cancelled_at           = fields.cancelledAt;
+  await supabase.from('crm_customers').upsert(updates, { onConflict: 'id' });
+}
 
 // ── Middleware (after webhook)
 app.use(cors({ origin: '*' }));
@@ -1263,6 +1347,210 @@ app.get('/api/marketing/users/:userId/campaigns', requireAdmin, async (req, res)
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// CRM
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/crm/customers — list all customers with CRM data (admin only)
+app.get('/api/crm/customers', requireAdmin, async (req, res) => {
+  try {
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, company, plan, status, role, created_at, last_login, stripe_customer_id, stripe_subscription_id')
+      .order('created_at', { ascending: false });
+
+    const { data: crmRows } = await supabase.from('crm_customers').select('*');
+    const { data: noteCounts } = await supabase.from('crm_notes').select('user_id');
+
+    const crmMap   = {};
+    (crmRows || []).forEach(r => { crmMap[r.user_id] = r; });
+    const noteMap  = {};
+    (noteCounts || []).forEach(n => { noteMap[n.user_id] = (noteMap[n.user_id] || 0) + 1; });
+
+    const result = (users || []).filter(u => u.role !== 'admin').map(u => {
+      const crm = crmMap[u.id] || {};
+      const trialExpiry = new Date(new Date(u.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
+      const trialDaysLeft = Math.ceil((trialExpiry - Date.now()) / (1000 * 60 * 60 * 24));
+      return {
+        id:              u.id,
+        firstName:       u.first_name,
+        lastName:        u.last_name,
+        email:           u.email,
+        company:         u.company,
+        plan:            u.plan || 'free',
+        status:          u.status,
+        createdAt:       u.created_at,
+        lastLogin:       u.last_login,
+        stripeCustomerId: u.stripe_customer_id || crm.stripe_customer_id,
+        stripeStatus:    crm.stripe_status || null,
+        lastPaymentAt:   crm.last_payment_at || null,
+        lastPaymentAmount: crm.last_payment_amount || null,
+        nextBillingAt:   crm.next_billing_at || null,
+        cardLast4:       crm.card_last4 || null,
+        cardBrand:       crm.card_brand || null,
+        trialDaysLeft:   trialDaysLeft > 0 ? trialDaysLeft : 0,
+        trialExpired:    trialDaysLeft <= 0,
+        marketingOptIn:  crm.marketing_opt_in || false,
+        noteCount:       noteMap[u.id] || 0,
+      };
+    });
+    res.json(result);
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/crm/customers/:userId — single customer full detail
+app.get('/api/crm/customers/:userId', requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data: user } = await supabase.from('users')
+      .select('*').eq('id', userId).single();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const { data: crm } = await supabase.from('crm_customers')
+      .select('*').eq('user_id', userId).maybeSingle();
+
+    const { data: notes } = await supabase.from('crm_notes')
+      .select('*, author:created_by(first_name, last_name)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: props } = await supabase.from('properties')
+      .select('id').eq('user_id', userId);
+
+    // Fetch live Stripe data if customer ID exists
+    let stripeData = null;
+    const stripeCustomerId = user.stripe_customer_id || crm?.stripe_customer_id;
+    if (stripeCustomerId) {
+      try {
+        const [customer, subscriptions, invoices] = await Promise.all([
+          stripe.customers.retrieve(stripeCustomerId),
+          stripe.subscriptions.list({ customer: stripeCustomerId, limit: 5 }),
+          stripe.invoices.list({ customer: stripeCustomerId, limit: 10 }),
+        ]);
+        const sub = subscriptions.data[0];
+        stripeData = {
+          customer,
+          subscription: sub || null,
+          invoices: invoices.data.map(inv => ({
+            id:         inv.id,
+            number:     inv.number,
+            status:     inv.status,
+            amount:     inv.amount_paid,
+            currency:   inv.currency,
+            created:    new Date(inv.created * 1000).toISOString(),
+            pdf:        inv.invoice_pdf,
+            hostedUrl:  inv.hosted_invoice_url,
+          })),
+          paymentMethod: sub?.default_payment_method
+            ? await stripe.paymentMethods.retrieve(sub.default_payment_method).catch(() => null)
+            : null,
+        };
+      } catch(e) { stripeData = { error: e.message }; }
+    }
+
+    const trialExpiry = new Date(new Date(user.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
+    res.json({
+      id:          user.id,
+      firstName:   user.first_name,
+      lastName:    user.last_name,
+      email:       user.email,
+      company:     user.company,
+      phone:       user.phone || null,
+      plan:        user.plan || 'free',
+      status:      user.status,
+      role:        user.role,
+      createdAt:   user.created_at,
+      lastLogin:   user.last_login,
+      trialExpiry: trialExpiry.toISOString(),
+      propertyCount: (props || []).length,
+      crm:         crm || {},
+      stripe:      stripeData,
+      notes:       (notes || []).map(n => ({
+        id:        n.id,
+        note:      n.note,
+        createdAt: n.created_at,
+        author:    n.author ? `${n.author.first_name} ${n.author.last_name}` : 'Admin',
+      })),
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/crm/customers/:userId/sync — force sync from Stripe
+app.post('/api/crm/customers/:userId/sync', requireAdmin, async (req, res) => {
+  try {
+    const { data: user } = await supabase.from('users')
+      .select('id, stripe_customer_id').eq('id', req.params.userId).single();
+    if (!user?.stripe_customer_id) return res.json({ synced: false, reason: 'No Stripe customer ID' });
+
+    const [customer, subscriptions] = await Promise.all([
+      stripe.customers.retrieve(user.stripe_customer_id),
+      stripe.subscriptions.list({ customer: user.stripe_customer_id, limit: 1 }),
+    ]);
+    const sub = subscriptions.data[0];
+    let cardBrand = null, cardLast4 = null, cardExpMonth = null, cardExpYear = null;
+    if (sub?.default_payment_method) {
+      const pm = await stripe.paymentMethods.retrieve(sub.default_payment_method).catch(() => null);
+      if (pm?.card) { cardBrand = pm.card.brand; cardLast4 = pm.card.last4; cardExpMonth = pm.card.exp_month; cardExpYear = pm.card.exp_year; }
+    }
+    await syncCrmCustomer(user.id, {
+      stripeCustomerId:    user.stripe_customer_id,
+      stripeSubscriptionId: sub?.id,
+      stripeStatus:        sub?.status || 'inactive',
+      nextBillingAt:       sub?.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+      trialEndsAt:         sub?.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+      cardBrand, cardLast4, cardExpMonth, cardExpYear,
+    });
+    res.json({ synced: true });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/crm/customers/:userId — update marketing opt-in (admin)
+app.patch('/api/crm/customers/:userId', requireAdmin, async (req, res) => {
+  const { marketingOptIn } = req.body;
+  await supabase.from('crm_customers').upsert({
+    id: req.params.userId, user_id: req.params.userId,
+    marketing_opt_in: marketingOptIn,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
+  res.json({ success: true });
+});
+
+// GET /api/crm/notes/:userId — get notes for a customer
+app.get('/api/crm/notes/:userId', requireAdmin, async (req, res) => {
+  const { data, error } = await supabase.from('crm_notes')
+    .select('*').eq('user_id', req.params.userId).order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// POST /api/crm/notes — add a note
+app.post('/api/crm/notes', requireAdmin, async (req, res) => {
+  const { userId, note } = req.body;
+  if (!userId || !note) return res.status(400).json({ error: 'userId and note required' });
+  const { data, error } = await supabase.from('crm_notes').insert({
+    id: require('crypto').randomUUID(),
+    user_id:    userId,
+    note:       note.trim(),
+    created_by: req.user.id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// DELETE /api/crm/notes/:id — delete a note
+app.delete('/api/crm/notes/:id', requireAdmin, async (req, res) => {
+  await supabase.from('crm_notes').delete().eq('id', req.params.id);
+  res.json({ success: true });
 });
 
 // ─────────────────────────────────────────────────────────────────
