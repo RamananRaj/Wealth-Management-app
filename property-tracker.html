@@ -236,6 +236,9 @@
   .btn-danger:hover { background: #8E030F; }
   .btn-sm { height: 28px; padding: 0 12px; font-size: 12px; }
   .btn-icon { width: 32px; padding: 0; justify-content: center; }
+  .mkt-tb-btn { background:#fff;border:1px solid var(--gray-200);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gray-700);cursor:pointer;font-family:inherit;line-height:1.4; }
+  .mkt-tb-btn:hover { background:var(--gray-100); }
+  #mkt-f-body:empty:before { content:attr(placeholder);color:var(--gray-400);pointer-events:none; }
 
   /* ── INFO TOOLTIP ── */
   .info-btn {
@@ -2756,6 +2759,151 @@
       <!-- ── TAB 3: MARKETING ── -->
       <div id="admin-panel-marketing" style="display:none;">
 
+        <!-- ── EMAIL CAMPAIGNS ─────────────────────────────────── -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <span class="section-title">Email Campaigns</span>
+          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Create, preview and send targeted emails to customer segments</span>
+          <button class="btn btn-primary btn-sm" onclick="showCampaignEditor(null)" style="margin-left:auto;">+ New Campaign</button>
+        </div>
+
+        <!-- Campaign list -->
+        <div id="mkt-campaign-list" class="detail-card" style="padding:0;overflow:hidden;margin-bottom:28px;">
+          <div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">Loading campaigns…</div>
+        </div>
+
+        <!-- Campaign editor panel (hidden by default) -->
+        <div id="mkt-editor-panel" style="display:none;margin-bottom:28px;">
+          <div class="detail-card" style="padding:0;overflow:hidden;">
+            <!-- Editor header -->
+            <div style="background:#F8FAFC;border-bottom:1px solid var(--gray-200);padding:14px 20px;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:14px;font-weight:700;color:var(--gray-900);" id="mkt-editor-title-label">New Campaign</span>
+              <button onclick="hideCampaignEditor()" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-400);" title="Close">✕</button>
+            </div>
+            <div style="padding:20px;">
+
+              <!-- Title + Subject -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;">Campaign Name <span style="color:var(--gray-400);font-weight:400;">(internal)</span></label>
+                  <input id="mkt-f-title" type="text" placeholder="e.g. May Re-engagement Blast"
+                    style="width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;">Email Subject Line</label>
+                  <input id="mkt-f-subject" type="text" placeholder="e.g. Your portfolio needs attention 👋"
+                    style="width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;box-sizing:border-box;">
+                </div>
+              </div>
+
+              <!-- Segment builder -->
+              <div style="background:#F8FAFC;border:1px solid var(--gray-200);border-radius:8px;padding:16px;margin-bottom:16px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:12px;">Target Segment</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+
+                  <!-- Plans -->
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Plan</div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="checkbox" id="mkt-seg-plan-free" value="free" checked style="accent-color:var(--primary);"> Free
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="checkbox" id="mkt-seg-plan-investor" value="investor" checked style="accent-color:var(--primary);"> Investor
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);cursor:pointer;">
+                      <input type="checkbox" id="mkt-seg-plan-portfolio" value="portfolio" checked style="accent-color:var(--primary);"> Portfolio
+                    </label>
+                  </div>
+
+                  <!-- Activity -->
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Activity</div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="radio" name="mkt-seg-activity" value="all" checked style="accent-color:var(--primary);"> All users
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="radio" name="mkt-seg-activity" value="active" style="accent-color:var(--primary);"> Active (last 30 days)
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);cursor:pointer;">
+                      <input type="radio" name="mkt-seg-activity" value="inactive" style="accent-color:var(--primary);"> Inactive (30+ days)
+                    </label>
+                  </div>
+
+                  <!-- Property count -->
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Properties</div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="radio" name="mkt-seg-props" value="all" checked style="accent-color:var(--primary);"> All
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="radio" name="mkt-seg-props" value="none" style="accent-color:var(--primary);"> No properties yet
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);margin-bottom:5px;cursor:pointer;">
+                      <input type="radio" name="mkt-seg-props" value="some" style="accent-color:var(--primary);"> 1–2 properties
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--gray-700);cursor:pointer;">
+                      <input type="radio" name="mkt-seg-props" value="many" style="accent-color:var(--primary);"> 3+ properties
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Preview recipients row -->
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--gray-200);display:flex;align-items:center;gap:12px;">
+                  <button class="btn btn-outline btn-sm" onclick="previewCampaignRecipients()">Preview Recipients</button>
+                  <div id="mkt-preview-summary" style="font-size:12px;color:var(--gray-500);flex:1;"></div>
+                </div>
+              </div>
+
+              <!-- Rich text editor -->
+              <div style="margin-bottom:16px;">
+                <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;">
+                  Email Body
+                  <span style="font-size:11px;font-weight:400;color:var(--gray-400);margin-left:6px;">Tip: use <code style="background:#F1F5F9;padding:1px 4px;border-radius:3px;">{{name}}</code> to personalise with recipient's first name</span>
+                </label>
+
+                <!-- Toolbar -->
+                <div style="display:flex;gap:4px;padding:6px 8px;background:#F8FAFC;border:1px solid var(--gray-200);border-bottom:none;border-radius:6px 6px 0 0;flex-wrap:wrap;">
+                  <button type="button" onclick="mktFormat('bold')"          title="Bold"          style="font-weight:700;" class="mkt-tb-btn">B</button>
+                  <button type="button" onclick="mktFormat('italic')"        title="Italic"        style="font-style:italic;" class="mkt-tb-btn">I</button>
+                  <button type="button" onclick="mktFormat('underline')"     title="Underline"     style="text-decoration:underline;" class="mkt-tb-btn">U</button>
+                  <span style="width:1px;background:var(--gray-200);margin:2px 4px;"></span>
+                  <button type="button" onclick="mktFormat('formatBlock','h2')"  title="Heading"  class="mkt-tb-btn" style="font-size:11px;">H2</button>
+                  <button type="button" onclick="mktFormat('formatBlock','p')"   title="Paragraph" class="mkt-tb-btn" style="font-size:11px;">¶</button>
+                  <span style="width:1px;background:var(--gray-200);margin:2px 4px;"></span>
+                  <button type="button" onclick="mktFormat('insertUnorderedList')" title="Bullet list"   class="mkt-tb-btn">• List</button>
+                  <button type="button" onclick="mktFormat('insertOrderedList')"   title="Numbered list" class="mkt-tb-btn">1. List</button>
+                  <span style="width:1px;background:var(--gray-200);margin:2px 4px;"></span>
+                  <button type="button" onclick="mktInsertLink()" title="Insert link" class="mkt-tb-btn">🔗</button>
+                  <button type="button" onclick="mktFormat('insertHorizontalRule')" title="Divider" class="mkt-tb-btn">—</button>
+                </div>
+                <div id="mkt-f-body" contenteditable="true"
+                  style="min-height:200px;border:1px solid var(--gray-200);border-radius:0 0 6px 6px;padding:14px 16px;font-size:13px;font-family:inherit;color:var(--gray-800);line-height:1.7;outline:none;background:#fff;"
+                  placeholder="Write your email content here…"></div>
+              </div>
+
+              <!-- Error message -->
+              <div id="mkt-editor-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:10px 14px;font-size:12px;color:#DC2626;margin-bottom:12px;"></div>
+
+              <!-- Preview recipient list -->
+              <div id="mkt-preview-list" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                <div style="font-size:12px;font-weight:600;color:#166534;margin-bottom:8px;" id="mkt-preview-list-header"></div>
+                <div id="mkt-preview-list-body" style="font-size:11px;color:var(--gray-600);max-height:140px;overflow-y:auto;line-height:1.8;"></div>
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="hideCampaignEditor()">Cancel</button>
+                <button class="btn btn-outline" id="mkt-save-draft-btn" onclick="saveCampaignDraft()">Save Draft</button>
+                <button class="btn btn-primary" id="mkt-send-btn" onclick="confirmSendCampaign()" disabled
+                  style="opacity:.5;" title="Preview recipients first to enable send">
+                  Send Campaign
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <!-- end email campaigns section -->
+
         <div class="section-header" style="margin-bottom:16px;">
           <span class="section-title">Marketing Intelligence</span>
           <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Live segmentation data to inform targeted outreach</span>
@@ -4735,6 +4883,7 @@ function switchAdminTab(tab) {
   });
   if (tab === 'system' || tab === 'business' || tab === 'marketing') loadSystemStats();
   if (tab === 'business') loadAdminCategories();
+  if (tab === 'marketing') loadMarketingCampaigns();
 }
 
 async function sendTestEmail() {
@@ -4988,6 +5137,278 @@ async function deleteCategory(id) {
     await loadPlatformCategories();
   } catch(e) {
     showToast('Failed: ' + e.message, 'danger');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARKETING CAMPAIGNS
+// ═══════════════════════════════════════════════════════════════
+
+let _mktCampaigns   = [];
+let _mktEditingId   = null;   // null = new, uuid = editing existing
+let _mktPreviewData = null;   // last preview result
+
+function mktSegmentFromUI() {
+  const plans = ['free','investor','portfolio'].filter(p =>
+    document.getElementById(`mkt-seg-plan-${p}`)?.checked
+  );
+  const activity = document.querySelector('input[name="mkt-seg-activity"]:checked')?.value || 'all';
+  const propCount = document.querySelector('input[name="mkt-seg-props"]:checked')?.value   || 'all';
+  return { plans, activity, propCount };
+}
+
+function mktSegmentLabel(seg) {
+  if (!seg) return 'All users';
+  const planLabel = (!seg.plans || seg.plans.length === 0 || seg.plans.length === 3)
+    ? 'All plans'
+    : seg.plans.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ');
+  const actLabel  = seg.activity === 'active' ? ' · Active (30d)' : seg.activity === 'inactive' ? ' · Inactive (30d+)' : '';
+  const propLabel = seg.propCount === 'none' ? ' · No properties' : seg.propCount === 'some' ? ' · 1–2 props' : seg.propCount === 'many' ? ' · 3+ props' : '';
+  return planLabel + actLabel + propLabel;
+}
+
+async function loadMarketingCampaigns() {
+  const el = document.getElementById('mkt-campaign-list');
+  if (!el) return;
+  try {
+    _mktCampaigns = await apiCall('GET', '/marketing/campaigns');
+    if (!_mktCampaigns.length) {
+      el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--gray-400);font-size:13px;">
+        No campaigns yet. Click <strong>+ New Campaign</strong> to create your first one.
+      </div>`;
+      return;
+    }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#F8FAFC;border-bottom:2px solid var(--gray-200);">
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Campaign</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Segment</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Status</th>
+          <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Recipients</th>
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Date</th>
+          <th style="padding:10px 14px;width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${_mktCampaigns.map(c => {
+          const isSent  = c.status === 'sent';
+          const badge   = isSent
+            ? `<span style="background:#ECFDF5;color:#059669;border:1px solid #BBF7D0;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700;">Sent</span>`
+            : `<span style="background:#FFF7ED;color:#D97706;border:1px solid #FDE68A;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700;">Draft</span>`;
+          const date    = isSent ? (c.sent_at||'').slice(0,10) : (c.created_at||'').slice(0,10);
+          const actions = isSent
+            ? ''
+            : `<button class="btn btn-outline btn-sm" onclick="showCampaignEditor('${c.id}')">Edit</button>
+               <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteCampaign('${c.id}')">Del</button>`;
+          return `<tr style="border-top:1px solid var(--gray-100);">
+            <td style="padding:11px 14px;">
+              <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${c.title || '—'}</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${c.subject || ''}</div>
+            </td>
+            <td style="padding:11px 14px;font-size:11px;color:var(--gray-500);">${mktSegmentLabel(c.segment)}</td>
+            <td style="padding:11px 14px;">${badge}</td>
+            <td style="padding:11px 14px;text-align:right;font-size:13px;color:var(--gray-700);">${isSent ? (c.recipient_count||0) : '—'}</td>
+            <td style="padding:11px 14px;font-size:12px;color:var(--gray-400);">${date}</td>
+            <td style="padding:11px 14px;text-align:right;">${actions}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;color:var(--danger);font-size:13px;">Failed to load campaigns: ${e.message}</div>`;
+  }
+}
+
+function showCampaignEditor(campaignId) {
+  const panel = document.getElementById('mkt-editor-panel');
+  if (!panel) return;
+  _mktEditingId   = campaignId;
+  _mktPreviewData = null;
+
+  // Reset preview state
+  const sendBtn = document.getElementById('mkt-send-btn');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '.5'; }
+  const previewList = document.getElementById('mkt-preview-list');
+  if (previewList) previewList.style.display = 'none';
+  const previewSummary = document.getElementById('mkt-preview-summary');
+  if (previewSummary) previewSummary.textContent = '';
+  const errEl = document.getElementById('mkt-editor-error');
+  if (errEl) errEl.style.display = 'none';
+
+  if (campaignId) {
+    // Load existing campaign into editor
+    const c = _mktCampaigns.find(x => x.id === campaignId);
+    if (!c) return;
+    document.getElementById('mkt-editor-title-label').textContent = 'Edit Campaign';
+    document.getElementById('mkt-f-title').value   = c.title   || '';
+    document.getElementById('mkt-f-subject').value = c.subject || '';
+    document.getElementById('mkt-f-body').innerHTML = c.body_html || '';
+
+    // Restore segment
+    const seg = c.segment || {};
+    ['free','investor','portfolio'].forEach(p => {
+      const el = document.getElementById(`mkt-seg-plan-${p}`);
+      if (el) el.checked = !seg.plans || seg.plans.length === 0 || seg.plans.includes(p);
+    });
+    const actEl = document.querySelector(`input[name="mkt-seg-activity"][value="${seg.activity || 'all'}"]`);
+    if (actEl) actEl.checked = true;
+    const propEl = document.querySelector(`input[name="mkt-seg-props"][value="${seg.propCount || 'all'}"]`);
+    if (propEl) propEl.checked = true;
+  } else {
+    // New campaign — reset fields
+    document.getElementById('mkt-editor-title-label').textContent = 'New Campaign';
+    document.getElementById('mkt-f-title').value   = '';
+    document.getElementById('mkt-f-subject').value = '';
+    document.getElementById('mkt-f-body').innerHTML = '';
+    ['free','investor','portfolio'].forEach(p => {
+      const el = document.getElementById(`mkt-seg-plan-${p}`);
+      if (el) el.checked = true;
+    });
+    const allAct  = document.querySelector('input[name="mkt-seg-activity"][value="all"]');
+    const allProp = document.querySelector('input[name="mkt-seg-props"][value="all"]');
+    if (allAct)  allAct.checked  = true;
+    if (allProp) allProp.checked = true;
+  }
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideCampaignEditor() {
+  const panel = document.getElementById('mkt-editor-panel');
+  if (panel) panel.style.display = 'none';
+  _mktEditingId   = null;
+  _mktPreviewData = null;
+}
+
+async function saveCampaignDraft() {
+  const errEl = document.getElementById('mkt-editor-error');
+  const btn   = document.getElementById('mkt-save-draft-btn');
+  if (errEl) errEl.style.display = 'none';
+
+  const title    = document.getElementById('mkt-f-title')?.value.trim();
+  const subject  = document.getElementById('mkt-f-subject')?.value.trim();
+  const bodyHtml = document.getElementById('mkt-f-body')?.innerHTML || '';
+  const segment  = mktSegmentFromUI();
+
+  if (!title || !subject) {
+    if (errEl) { errEl.textContent = 'Campaign name and subject line are required.'; errEl.style.display = ''; }
+    return;
+  }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    if (_mktEditingId) {
+      await apiCall('PUT', `/marketing/campaigns/${_mktEditingId}`, { title, subject, bodyHtml, segment });
+    } else {
+      const created = await apiCall('POST', '/marketing/campaigns', { title, subject, bodyHtml, segment });
+      _mktEditingId = created.id;
+    }
+    showToast('Draft saved.', 'success');
+    await loadMarketingCampaigns();
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Save failed: ' + e.message; errEl.style.display = ''; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Draft'; }
+  }
+}
+
+async function previewCampaignRecipients() {
+  const summaryEl = document.getElementById('mkt-preview-summary');
+  const listEl    = document.getElementById('mkt-preview-list');
+  const listHeader = document.getElementById('mkt-preview-list-header');
+  const listBody   = document.getElementById('mkt-preview-list-body');
+  const sendBtn    = document.getElementById('mkt-send-btn');
+  const errEl      = document.getElementById('mkt-editor-error');
+  if (errEl) errEl.style.display = 'none';
+
+  if (summaryEl) summaryEl.textContent = 'Fetching recipients…';
+  try {
+    const segment = mktSegmentFromUI();
+    _mktPreviewData = await apiCall('POST', '/marketing/campaigns/preview', { segment });
+    const { count, recipients } = _mktPreviewData;
+
+    if (summaryEl) summaryEl.innerHTML = `<strong style="color:${count > 0 ? 'var(--success)' : 'var(--gray-500)'};">${count} recipient${count !== 1 ? 's' : ''}</strong> match this segment`;
+
+    if (listEl && listHeader && listBody) {
+      listEl.style.display = count > 0 ? '' : 'none';
+      if (count > 0) {
+        listHeader.textContent = `${count} recipient${count !== 1 ? 's' : ''} will receive this campaign:`;
+        listBody.innerHTML = recipients.map(r =>
+          `<div>${r.name || r.email} <span style="color:var(--gray-400);">&lt;${r.email}&gt;</span> <span style="background:#EFF6FF;color:#1D4ED8;border-radius:3px;padding:1px 5px;font-size:10px;">${r.plan||'free'}</span></div>`
+        ).join('');
+      }
+    }
+
+    // Unlock send button only if there are recipients
+    if (sendBtn) {
+      sendBtn.disabled = count === 0;
+      sendBtn.style.opacity = count > 0 ? '1' : '.5';
+      sendBtn.title = count > 0 ? 'Send campaign to these recipients' : 'No recipients match the selected segment';
+    }
+  } catch(e) {
+    if (summaryEl) summaryEl.textContent = 'Preview failed: ' + e.message;
+    if (errEl) { errEl.textContent = 'Preview failed: ' + e.message; errEl.style.display = ''; }
+  }
+}
+
+async function confirmSendCampaign() {
+  if (!_mktPreviewData || _mktPreviewData.count === 0) {
+    showToast('Preview recipients first.', 'warning');
+    return;
+  }
+  // Must be saved first
+  if (!_mktEditingId) {
+    showToast('Save the draft first, then send.', 'warning');
+    return;
+  }
+  const { count } = _mktPreviewData;
+  if (!confirm(`Send this campaign to ${count} recipient${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  const sendBtn = document.getElementById('mkt-send-btn');
+  const errEl   = document.getElementById('mkt-editor-error');
+  if (errEl) errEl.style.display = 'none';
+  try {
+    // Save latest content before sending
+    const title    = document.getElementById('mkt-f-title')?.value.trim();
+    const subject  = document.getElementById('mkt-f-subject')?.value.trim();
+    const bodyHtml = document.getElementById('mkt-f-body')?.innerHTML || '';
+    const segment  = mktSegmentFromUI();
+    await apiCall('PUT', `/marketing/campaigns/${_mktEditingId}`, { title, subject, bodyHtml, segment });
+
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
+    const result = await apiCall('POST', `/marketing/campaigns/${_mktEditingId}/send`);
+    showToast(`Campaign sent to ${result.sent} recipient${result.sent !== 1 ? 's' : ''}${result.failed ? ` (${result.failed} failed)` : ''}.`, 'success');
+    hideCampaignEditor();
+    await loadMarketingCampaigns();
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Send failed: ' + e.message; errEl.style.display = ''; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Campaign'; }
+  }
+}
+
+async function deleteCampaign(id) {
+  if (!confirm('Delete this draft campaign?')) return;
+  try {
+    await apiCall('DELETE', `/marketing/campaigns/${id}`);
+    showToast('Campaign deleted.', 'success');
+    await loadMarketingCampaigns();
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, 'danger');
+  }
+}
+
+// Rich text editor helpers
+function mktFormat(command, value) {
+  document.getElementById('mkt-f-body')?.focus();
+  document.execCommand(command, false, value || null);
+}
+
+function mktInsertLink() {
+  const url = prompt('Enter URL:');
+  if (url) {
+    document.getElementById('mkt-f-body')?.focus();
+    document.execCommand('createLink', false, url);
   }
 }
 

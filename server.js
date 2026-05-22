@@ -301,7 +301,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(403).json({ error: 'Your account has been deactivated. Please contact an administrator.' });
   }
 
-  await supabase.from('users').update({ updated_at: new Date().toISOString() }).eq('id', user.id);
+  await supabase.from('users').update({ updated_at: new Date().toISOString(), last_login: new Date().toISOString() }).eq('id', user.id);
 
   const token = jwt.sign(
     { id: user.id, role: user.role, plan: user.plan },
@@ -906,6 +906,174 @@ app.patch('/api/categories/:id', requireAdmin, async (req, res) => {
 app.delete('/api/categories/:id', requireAdmin, async (req, res) => {
   await supabase.from('platform_categories').delete().eq('id', req.params.id);
   res.json({ success: true });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// MARKETING CAMPAIGNS
+// ─────────────────────────────────────────────────────────────────
+
+// Wrap campaign body in a branded email shell
+function wrapMarketingEmail(bodyHtml) {
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
+    <div style="background:#1E3A5F;padding:28px 32px;border-radius:8px 8px 0 0;">
+      <h1 style="color:#fff;margin:0;font-size:22px;">${APP_NAME}</h1>
+    </div>
+    <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+      ${bodyHtml}
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0 16px;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">You're receiving this because you have an account with ${APP_NAME}.
+        <a href="${APP_URL}" style="color:#1E3A5F;">Visit ${APP_NAME}</a></p>
+    </div>
+  </div>`;
+}
+
+// Helper: resolve a segment config into a list of recipient users
+async function getSegmentRecipients(segment) {
+  let query = supabase.from('users')
+    .select('id, email, first_name, last_name, plan, last_login')
+    .neq('role', 'admin')
+    .eq('status', 'active');
+
+  // Filter by plan (empty array = all plans)
+  if (segment.plans && segment.plans.length > 0) {
+    query = query.in('plan', segment.plans);
+  }
+
+  // Filter by activity
+  if (segment.activity === 'active' || segment.activity === 'inactive') {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    if (segment.activity === 'active') {
+      query = query.gte('last_login', cutoff);
+    } else {
+      // inactive: last_login older than 30 days OR never logged in
+      query = query.or(`last_login.lt.${cutoff},last_login.is.null`);
+    }
+  }
+
+  const { data: users, error } = await query;
+  if (error) throw error;
+  if (!users || !users.length) return [];
+
+  // Filter by property count (requires a secondary query)
+  if (!segment.propCount || segment.propCount === 'all') return users;
+
+  const { data: props } = await supabase
+    .from('properties').select('user_id')
+    .in('user_id', users.map(u => u.id));
+
+  const countMap = {};
+  (props || []).forEach(p => { countMap[p.user_id] = (countMap[p.user_id] || 0) + 1; });
+
+  return users.filter(u => {
+    const n = countMap[u.id] || 0;
+    if (segment.propCount === 'none') return n === 0;
+    if (segment.propCount === 'some') return n >= 1 && n <= 2;
+    if (segment.propCount === 'many') return n >= 3;
+    return true;
+  });
+}
+
+// GET /api/marketing/campaigns — list all (admin only)
+app.get('/api/marketing/campaigns', requireAdmin, async (req, res) => {
+  const { data, error } = await supabase.from('marketing_campaigns')
+    .select('id, title, subject, segment, status, recipient_count, sent_at, created_at')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// POST /api/marketing/campaigns — create draft
+app.post('/api/marketing/campaigns', requireAdmin, async (req, res) => {
+  const { title, subject, bodyHtml, segment } = req.body;
+  if (!title || !subject) return res.status(400).json({ error: 'Title and subject are required.' });
+  const { data, error } = await supabase.from('marketing_campaigns').insert({
+    title, subject,
+    body_html:  bodyHtml || '',
+    segment:    segment  || { plans: [], activity: 'all', propCount: 'all' },
+    status:     'draft',
+    created_by: req.user.id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// PUT /api/marketing/campaigns/:id — update draft
+app.put('/api/marketing/campaigns/:id', requireAdmin, async (req, res) => {
+  const { title, subject, bodyHtml, segment } = req.body;
+  const updates = { updated_at: new Date().toISOString() };
+  if (title     !== undefined) updates.title     = title;
+  if (subject   !== undefined) updates.subject   = subject;
+  if (bodyHtml  !== undefined) updates.body_html = bodyHtml;
+  if (segment   !== undefined) updates.segment   = segment;
+  const { error } = await supabase.from('marketing_campaigns').update(updates).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// DELETE /api/marketing/campaigns/:id — drafts only
+app.delete('/api/marketing/campaigns/:id', requireAdmin, async (req, res) => {
+  await supabase.from('marketing_campaigns').delete().eq('id', req.params.id).eq('status', 'draft');
+  res.json({ success: true });
+});
+
+// POST /api/marketing/campaigns/preview — resolve segment to recipient list
+app.post('/api/marketing/campaigns/preview', requireAdmin, async (req, res) => {
+  try {
+    const recipients = await getSegmentRecipients(req.body.segment || {});
+    res.json({
+      count: recipients.length,
+      recipients: recipients.map(u => ({
+        id: u.id, email: u.email, plan: u.plan,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/marketing/campaigns/:id/send — send campaign to segment
+app.post('/api/marketing/campaigns/:id/send', requireAdmin, async (req, res) => {
+  const { data: campaign, error: camErr } = await supabase
+    .from('marketing_campaigns').select('*').eq('id', req.params.id).single();
+  if (camErr || !campaign) return res.status(404).json({ error: 'Campaign not found.' });
+  if (campaign.status === 'sent') return res.status(400).json({ error: 'Campaign already sent.' });
+
+  try {
+    const recipients = await getSegmentRecipients(campaign.segment || {});
+    if (!recipients.length) return res.status(400).json({ error: 'No recipients match the selected segment.' });
+
+    let sent = 0, failed = 0;
+    for (const user of recipients) {
+      try {
+        // Allow {{name}} personalisation token in body
+        const personalised = (campaign.body_html || '').replace(/\{\{name\}\}/g, user.first_name || 'there');
+        await sendEmail({
+          to:      user.email,
+          subject: campaign.subject,
+          html:    wrapMarketingEmail(personalised),
+        });
+        sent++;
+      } catch (e) {
+        console.error(`Marketing send failed for ${user.email}:`, e.message);
+        failed++;
+      }
+    }
+
+    await supabase.from('marketing_campaigns').update({
+      status:          'sent',
+      recipient_count: sent,
+      sent_at:         new Date().toISOString(),
+      updated_at:      new Date().toISOString(),
+    }).eq('id', req.params.id);
+
+    console.log(`📧  Campaign "${campaign.title}" sent to ${sent} recipients (${failed} failed)`);
+    res.json({ success: true, sent, failed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────
