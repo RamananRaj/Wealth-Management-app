@@ -3174,8 +3174,14 @@
 
         <!-- Active Custom Rules -->
         <div class="section-header" style="margin-bottom:16px;">
-          <span class="section-title">Active Custom Rules</span>
-          <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Admin-approved rules that extend the Portfolio Assistant</span>
+          <div>
+            <span class="section-title">Active Custom Rules</span>
+            <span class="section-sub" style="font-size:12px;color:var(--gray-500);margin-left:8px;">Admin-approved rules that extend the Portfolio Assistant</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAiRuleModal()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Rule
+          </button>
         </div>
         <div class="detail-card" style="padding:0;overflow:hidden;">
           <div id="ai-rules-container">
@@ -3923,6 +3929,9 @@
         </label>
         <input type="text" id="ai-rule-pattern" class="auth-input" placeholder="offset, redraw balance, buffer account">
       </div>
+      <!-- Duplicate keyword warning (live) -->
+      <div id="ai-rule-dup-warning" style="display:none;background:#FEF9C3;color:#854D0E;border:1px solid #FDE047;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.5;"></div>
+
       <div class="form-group" style="margin-bottom:14px;">
         <label>Response Type <span style="color:var(--danger)">*</span></label>
         <select id="ai-rule-type" class="auth-input" onchange="onAiRuleTypeChange()">
@@ -5251,6 +5260,7 @@ function openAiRuleModal(ruleId, suggestionId, queryText, askedCount, existingRu
   document.getElementById('ai-rule-id').value            = ruleId || '';
   document.getElementById('ai-rule-suggestion-id').value = suggestionId || '';
   document.getElementById('ai-rule-modal-error').style.display = 'none';
+  document.getElementById('ai-rule-dup-warning').style.display = 'none';
 
   if (existingRule && typeof existingRule === 'object') {
     // Edit existing rule
@@ -5261,8 +5271,8 @@ function openAiRuleModal(ruleId, suggestionId, queryText, askedCount, existingRu
     document.getElementById('ai-rule-data-query').value   = existingRule.data_query || 'rates';
     document.getElementById('ai-rule-custom-response').value = existingRule.custom_response || '';
     document.getElementById('ai-rule-query-preview').style.display = 'none';
-  } else {
-    // Approve new suggestion
+  } else if (suggestionId) {
+    // Approve from suggestion
     document.getElementById('ai-rule-modal-title').textContent = 'Approve as Rule';
     document.getElementById('ai-rule-name').value         = '';
     document.getElementById('ai-rule-pattern').value      = '';
@@ -5276,9 +5286,21 @@ function openAiRuleModal(ruleId, suggestionId, queryText, askedCount, existingRu
     } else {
       document.getElementById('ai-rule-query-preview').style.display = 'none';
     }
+  } else {
+    // Brand new rule (Add Rule button)
+    document.getElementById('ai-rule-modal-title').textContent = 'Add New Rule';
+    document.getElementById('ai-rule-name').value         = '';
+    document.getElementById('ai-rule-pattern').value      = '';
+    document.getElementById('ai-rule-type').value         = 'data';
+    document.getElementById('ai-rule-data-query').value   = 'rates';
+    document.getElementById('ai-rule-custom-response').value = '';
+    document.getElementById('ai-rule-query-preview').style.display = 'none';
   }
   onAiRuleTypeChange();
   document.getElementById('ai-rule-modal-overlay').classList.add('open');
+  // Attach live duplicate checker to pattern field
+  const patternEl = document.getElementById('ai-rule-pattern');
+  patternEl.oninput = checkAiRuleDuplicate;
 }
 
 function closeAiRuleModal() {
@@ -5289,6 +5311,37 @@ function onAiRuleTypeChange() {
   const type = document.getElementById('ai-rule-type').value;
   document.getElementById('ai-rule-data-section').style.display   = type === 'data'   ? '' : 'none';
   document.getElementById('ai-rule-custom-section').style.display = type === 'custom' ? '' : 'none';
+}
+
+// Live duplicate keyword checker — runs as admin types pattern
+function checkAiRuleDuplicate() {
+  const currentRuleId = document.getElementById('ai-rule-id').value.trim();
+  const patternVal    = document.getElementById('ai-rule-pattern').value.trim();
+  const dupEl         = document.getElementById('ai-rule-dup-warning');
+  if (!patternVal || !_customAiRules.length) { dupEl.style.display = 'none'; return null; }
+
+  const newKeywords = patternVal.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+  const conflicts = [];
+
+  for (const rule of _customAiRules) {
+    if (rule.id === currentRuleId) continue; // skip self when editing
+    const existingKeywords = rule.pattern.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+    const overlap = newKeywords.filter(k => existingKeywords.includes(k));
+    if (overlap.length > 0) {
+      conflicts.push({ name: rule.name, keywords: overlap });
+    }
+  }
+
+  if (conflicts.length > 0) {
+    dupEl.innerHTML = `<strong>⚠ Keyword conflict:</strong> ${conflicts.map(c =>
+      `"<strong>${escHtml(c.keywords.join(', '))}</strong>" already used in rule "<strong>${escHtml(c.name)}</strong>"`
+    ).join('; ')}`;
+    dupEl.style.display = '';
+    return conflicts;
+  } else {
+    dupEl.style.display = 'none';
+    return null;
+  }
 }
 
 async function saveAiRule() {
@@ -5305,6 +5358,15 @@ async function saveAiRule() {
   if (!name)    { errEl.textContent = 'Rule name is required.'; errEl.style.display=''; return; }
   if (!pattern) { errEl.textContent = 'Trigger keywords are required.'; errEl.style.display=''; return; }
   if (type === 'custom' && !customResp) { errEl.textContent = 'Custom reply text is required.'; errEl.style.display=''; return; }
+
+  // Duplicate keyword check — warn but allow override
+  const conflicts = checkAiRuleDuplicate();
+  if (conflicts) {
+    const conflictNames = conflicts.map(c => `"${c.name}"`).join(', ');
+    errEl.innerHTML = `Some keywords already exist in ${conflictNames}. Edit your keywords to avoid overlap, or remove the conflicting keywords from the existing rule first.`;
+    errEl.style.display = '';
+    return;
+  }
 
   try {
     const payload = { name, pattern, dataQuery, customResponse: customResp, suggestionId: suggId || undefined };
