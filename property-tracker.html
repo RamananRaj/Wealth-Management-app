@@ -3551,25 +3551,46 @@
   <div class="upgrade-card">
     <div class="upgrade-icon">🚀</div>
     <div class="upgrade-title">Upgrade Your Plan</div>
-    <div class="upgrade-desc">You've reached the <strong>1-property limit</strong> on the Free plan. Upgrade to add unlimited properties and unlock the full platform.</div>
+    <div class="upgrade-desc">You've reached the <strong>1-property limit</strong> on the Free plan. Upgrade to unlock more properties and powerful investor tools.</div>
     <div class="upgrade-plans">
       <div class="upgrade-plan-tile" style="background:#EFF6FF;border-color:#BFDBFE;" onclick="requestPlanUpgrade('investor')">
         <div class="upgrade-plan-name" style="color:#0176D3;">Investor</div>
-        <div class="upgrade-plan-price" style="color:#0176D3;">$25</div>
-        <div class="upgrade-plan-period" style="color:#0176D3;">/month</div>
-        <div class="upgrade-plan-features" style="color:#1D4ED8;">Unlimited properties<br>Tax reports<br>Advisor chat</div>
-        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#0176D3;border:1px solid #BFDBFE;border-radius:6px;padding:5px 0;background:rgba(255,255,255,0.6);">Request Upgrade →</div>
+        <div class="upgrade-plan-price" style="color:#0176D3;">$30</div>
+        <div class="upgrade-plan-period" style="color:#0176D3;">/month AUD</div>
+        <div style="margin:8px 0 4px;border-top:1px solid #BFDBFE;padding-top:8px;text-align:left;">
+          <div style="font-size:11px;color:#1D4ED8;line-height:1.8;">
+            ✓ Up to 10 properties<br>
+            ✓ Income &amp; expense tracking<br>
+            ✓ Tax &amp; financial reports<br>
+            ✓ Portfolio AI Assistant<br>
+            ✓ 1 linked advisor<br>
+            ✓ Email support
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#0176D3;border:1px solid #BFDBFE;border-radius:6px;padding:5px 0;background:rgba(255,255,255,0.6);text-align:center;">Upgrade to Investor →</div>
       </div>
       <div class="upgrade-plan-tile" style="background:#F5F3FF;border-color:#DDD6FE;" onclick="requestPlanUpgrade('portfolio')">
-        <div class="upgrade-plan-name" style="color:#7C3AED;">Portfolio</div>
+        <div style="position:relative;">
+          <div class="upgrade-plan-name" style="color:#7C3AED;">Portfolio</div>
+          <div style="position:absolute;top:-4px;right:0;background:#7C3AED;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;letter-spacing:0.05em;">BEST VALUE</div>
+        </div>
         <div class="upgrade-plan-price" style="color:#7C3AED;">$80</div>
-        <div class="upgrade-plan-period" style="color:#7C3AED;">/month</div>
-        <div class="upgrade-plan-features" style="color:#5B21B6;">Everything in Investor<br>Priority support<br>Advanced analytics</div>
-        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#7C3AED;border:1px solid #DDD6FE;border-radius:6px;padding:5px 0;background:rgba(255,255,255,0.6);">Request Upgrade →</div>
+        <div class="upgrade-plan-period" style="color:#7C3AED;">/month AUD</div>
+        <div style="margin:8px 0 4px;border-top:1px solid #DDD6FE;padding-top:8px;text-align:left;">
+          <div style="font-size:11px;color:#5B21B6;line-height:1.8;">
+            ✓ Unlimited properties<br>
+            ✓ Everything in Investor<br>
+            ✓ Up to 3 linked advisors<br>
+            ✓ Advanced portfolio analytics<br>
+            ✓ Early access to new features<br>
+            ✓ Priority support
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#7C3AED;border:1px solid #DDD6FE;border-radius:6px;padding:5px 0;background:rgba(255,255,255,0.6);text-align:center;">Upgrade to Portfolio →</div>
       </div>
     </div>
     <div id="upgrade-sent-msg" style="display:none;margin-bottom:12px;padding:10px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:13px;color:#166534;text-align:center;"></div>
-    <p style="font-size:12px;color:var(--gray-400);margin-bottom:16px;">Clicking a plan sends a request to your admin via chat. They will upgrade your account and confirm.</p>
+    <p style="font-size:12px;color:var(--gray-400);margin-bottom:16px;">All plans include GST. Cancel anytime. Secure payment via Stripe.</p>
     <button class="btn btn-outline" onclick="closeUpgrade()">Maybe Later</button>
   </div>
 </div>
@@ -4398,8 +4419,8 @@ const WM_BROADCASTS_KEY = 'wm_broadcasts';
 const WM_INVITES_KEY    = 'wm_invites';
 
 const PLANS = {
-  free:      { label: 'Free',      maxProps: 1,        color: '#6B7280', bg: '#F3F4F6', border: '#E5E7EB' },
-  investor:  { label: 'Investor',  maxProps: Infinity,  color: '#0176D3', bg: '#EFF6FF', border: '#BFDBFE' },
+  free:      { label: 'Free',      maxProps: 1,         color: '#6B7280', bg: '#F3F4F6', border: '#E5E7EB' },
+  investor:  { label: 'Investor',  maxProps: 10,        color: '#0176D3', bg: '#EFF6FF', border: '#BFDBFE' },
   portfolio: { label: 'Portfolio', maxProps: Infinity,  color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
 };
 
@@ -4936,6 +4957,20 @@ function openUpgrade() {
   document.getElementById('upgrade-overlay').classList.add('open');
   const msg = document.getElementById('upgrade-sent-msg');
   if (msg) msg.style.display = 'none';
+  // Update description based on current plan
+  const session = getSession();
+  const descEl = document.querySelector('.upgrade-desc');
+  if (descEl && session) {
+    const plan = getUserPlan(getUsers().find(u => u.id === session.id) || {});
+    if (plan === 'investor') {
+      descEl.innerHTML = `You've reached the <strong>10-property limit</strong> on the Investor plan. Upgrade to Portfolio for unlimited properties and advanced features.`;
+      // Hide investor tile, only show portfolio
+      document.querySelectorAll('.upgrade-plan-tile')[0].style.display = 'none';
+    } else {
+      descEl.innerHTML = `You've reached the <strong>1-property limit</strong> on the Free plan. Upgrade to unlock more properties and powerful investor tools.`;
+      document.querySelectorAll('.upgrade-plan-tile')[0].style.display = '';
+    }
+  }
 }
 function closeUpgrade() { document.getElementById('upgrade-overlay').classList.remove('open'); }
 
