@@ -2625,7 +2625,7 @@
         <div class="stat-card"><div class="stat-card-accent" style="background:var(--success);"></div>
           <div class="stat-card-body"><div class="stat-label">Active Paid</div><div class="stat-value" id="crm-stat-active">–</div></div></div>
         <div class="stat-card"><div class="stat-card-accent" style="background:var(--warning);"></div>
-          <div class="stat-card-body"><div class="stat-label">Trial Expiring (7d)</div><div class="stat-value" id="crm-stat-trial">–</div></div></div>
+          <div class="stat-card-body"><div class="stat-label">Free Plan</div><div class="stat-value" id="crm-stat-trial">–</div></div></div>
         <div class="stat-card"><div class="stat-card-accent" style="background:var(--danger);"></div>
           <div class="stat-card-body"><div class="stat-label">Payment Issues</div><div class="stat-value" id="crm-stat-issues">–</div></div></div>
       </div>
@@ -2644,7 +2644,7 @@
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="past_due">Payment Issue</option>
-          <option value="trial">Trial</option>
+          <option value="free">Free Plan</option>
           <option value="cancelled">Cancelled</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="loadCrmCustomers()">
@@ -2658,7 +2658,7 @@
         <table>
           <thead><tr>
             <th>Customer</th><th>Company</th><th>Plan</th><th>Stripe Status</th>
-            <th>Last Payment</th><th>Next Billing</th><th>Trial</th><th>Notes</th><th>Joined</th><th>Actions</th>
+            <th>Last Payment</th><th>Next Billing</th><th>Notes</th><th>Joined</th><th>Actions</th>
           </tr></thead>
           <tbody id="crm-tbody"></tbody>
         </table>
@@ -4011,7 +4011,6 @@
       <div class="cu-info-item"><div class="cu-info-label">Joined</div><div class="cu-info-value" id="crm-d-joined">–</div></div>
       <div class="cu-info-item"><div class="cu-info-label">Last Login</div><div class="cu-info-value" id="crm-d-last-login">–</div></div>
       <div class="cu-info-item"><div class="cu-info-label">Properties</div><div class="cu-info-value" id="crm-d-props">–</div></div>
-      <div class="cu-info-item"><div class="cu-info-label">Trial Expires</div><div class="cu-info-value" id="crm-d-trial">–</div></div>
     </div>
     <p class="cu-section-title">Email Subscriptions</p>
     <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--gray-50);border-radius:6px;margin-bottom:16px;">
@@ -4034,7 +4033,6 @@
         <div class="cu-info-item"><div class="cu-info-label">Plan</div><div class="cu-info-value" id="crm-sub-plan">–</div></div>
         <div class="cu-info-item"><div class="cu-info-label">Last Payment</div><div class="cu-info-value" id="crm-sub-last-pay">–</div></div>
         <div class="cu-info-item"><div class="cu-info-label">Next Billing</div><div class="cu-info-value" id="crm-sub-next-bill">–</div></div>
-        <div class="cu-info-item"><div class="cu-info-label">Trial Ends</div><div class="cu-info-value" id="crm-sub-trial">–</div></div>
         <div class="cu-info-item"><div class="cu-info-label">Cancelled</div><div class="cu-info-value" id="crm-sub-cancelled">–</div></div>
       </div>
       <p class="cu-section-title">Payment Method</p>
@@ -5332,7 +5330,7 @@ function renderCrmStats() {
   const customers = _crmAllCustomers;
   document.getElementById('crm-stat-total').textContent  = customers.length;
   document.getElementById('crm-stat-active').textContent = customers.filter(c => c.stripeStatus === 'active').length;
-  document.getElementById('crm-stat-trial').textContent  = customers.filter(c => c.trialDaysLeft > 0 && c.trialDaysLeft <= 7 && c.plan === 'free').length;
+  document.getElementById('crm-stat-trial').textContent  = customers.filter(c => c.plan === 'free').length;
   document.getElementById('crm-stat-issues').textContent = customers.filter(c => c.stripeStatus === 'past_due').length;
 }
 
@@ -5343,7 +5341,7 @@ function filterCrmList() {
   let list = _crmAllCustomers;
   if (search) list = list.filter(c => `${c.firstName} ${c.lastName} ${c.email} ${c.company||''}`.toLowerCase().includes(search));
   if (plan)   list = list.filter(c => c.plan === plan);
-  if (status === 'trial')     list = list.filter(c => c.trialDaysLeft > 0 && c.plan === 'free');
+  if (status === 'free')      list = list.filter(c => c.plan === 'free');
   else if (status)            list = list.filter(c => c.stripeStatus === status);
   renderCrmTable(list);
 }
@@ -5362,9 +5360,6 @@ function renderCrmTable(customers) {
     return map[s] || `<span class="stat-badge">${s}</span>`;
   };
   tbody.innerHTML = customers.map(c => {
-    const trialBadge = (c.plan === 'free' && c.trialDaysLeft > 0)
-      ? `<span class="stat-badge" style="background:#FEF9C3;color:#854D0E;border:1px solid #FDE047;">${c.trialDaysLeft}d left</span>`
-      : c.trialExpired ? `<span style="color:var(--gray-400);font-size:12px;">Expired</span>` : `<span style="color:var(--gray-400);font-size:12px;">–</span>`;
     return `<tr>
       <td>
         <div style="font-weight:600;font-size:13px;">${c.firstName} ${c.lastName}</div>
@@ -5375,7 +5370,6 @@ function renderCrmTable(customers) {
       <td>${stripeStatusBadge(c.stripeStatus)}</td>
       <td style="font-size:12px;color:var(--gray-600);">${c.lastPaymentAt ? new Date(c.lastPaymentAt).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + (c.lastPaymentAmount ? `<br><span style="color:var(--success);font-weight:600;">$${(c.lastPaymentAmount/100).toFixed(2)}</span>` : '') : '–'}</td>
       <td style="font-size:12px;color:var(--gray-600);">${c.nextBillingAt ? new Date(c.nextBillingAt).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '–'}</td>
-      <td>${trialBadge}</td>
       <td style="text-align:center;font-size:12px;">${c.noteCount > 0 ? `<span class="stat-badge" style="background:var(--primary-light);color:var(--primary-dark);">${c.noteCount}</span>` : '–'}</td>
       <td style="font-size:12px;color:var(--gray-500);">${new Date(c.createdAt).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'})}</td>
       <td>
@@ -5434,9 +5428,6 @@ function populateCrmDrawer(d) {
   document.getElementById('crm-d-joined').textContent     = new Date(d.createdAt).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('crm-d-last-login').textContent = d.lastLogin ? new Date(d.lastLogin).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : 'Never';
   document.getElementById('crm-d-props').textContent      = d.propertyCount;
-  const trialDate = new Date(d.trialExpiry);
-  const trialDaysLeft = Math.ceil((trialDate - Date.now()) / (1000*60*60*24));
-  document.getElementById('crm-d-trial').textContent      = trialDaysLeft > 0 ? `${trialDate.toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'})} (${trialDaysLeft}d left)` : 'Expired';
   document.getElementById('crm-marketing-optin').checked  = d.crm?.marketing_opt_in || false;
   document.getElementById('crm-d-stripe-id').textContent  = d.crm?.stripe_customer_id || d.stripe?.customer?.id || 'Not yet a Stripe customer';
 
@@ -5467,7 +5458,6 @@ function populateCrmSubscription(stripe, crm) {
   document.getElementById('crm-sub-plan').textContent      = crm?.stripe_plan || '–';
   document.getElementById('crm-sub-last-pay').textContent  = crm?.last_payment_at ? new Date(crm.last_payment_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + (crm.last_payment_amount ? ` — $${(crm.last_payment_amount/100).toFixed(2)}` : '') : '–';
   document.getElementById('crm-sub-next-bill').textContent = sub.current_period_end ? new Date(sub.current_period_end*1000).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}) : '–';
-  document.getElementById('crm-sub-trial').textContent     = sub.trial_end ? new Date(sub.trial_end*1000).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '–';
   document.getElementById('crm-sub-cancelled').textContent = sub.canceled_at ? new Date(sub.canceled_at*1000).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '–';
   // Card
   const pm = stripe.paymentMethod;

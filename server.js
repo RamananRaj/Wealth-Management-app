@@ -1371,8 +1371,6 @@ app.get('/api/crm/customers', requireAdmin, async (req, res) => {
 
     const result = (users || []).filter(u => u.role !== 'admin').map(u => {
       const crm = crmMap[u.id] || {};
-      const trialExpiry = new Date(new Date(u.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
-      const trialDaysLeft = Math.ceil((trialExpiry - Date.now()) / (1000 * 60 * 60 * 24));
       return {
         id:              u.id,
         firstName:       u.first_name,
@@ -1390,8 +1388,6 @@ app.get('/api/crm/customers', requireAdmin, async (req, res) => {
         nextBillingAt:   crm.next_billing_at || null,
         cardLast4:       crm.card_last4 || null,
         cardBrand:       crm.card_brand || null,
-        trialDaysLeft:   trialDaysLeft > 0 ? trialDaysLeft : 0,
-        trialExpired:    trialDaysLeft <= 0,
         marketingOptIn:  crm.marketing_opt_in || false,
         noteCount:       noteMap[u.id] || 0,
       };
@@ -1452,7 +1448,6 @@ app.get('/api/crm/customers/:userId', requireAdmin, async (req, res) => {
       } catch(e) { stripeData = { error: e.message }; }
     }
 
-    const trialExpiry = new Date(new Date(user.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
     res.json({
       id:          user.id,
       firstName:   user.first_name,
@@ -1465,7 +1460,6 @@ app.get('/api/crm/customers/:userId', requireAdmin, async (req, res) => {
       role:        user.role,
       createdAt:   user.created_at,
       lastLogin:   user.last_login,
-      trialExpiry: trialExpiry.toISOString(),
       propertyCount: (props || []).length,
       crm:         crm || {},
       stripe:      stripeData,
