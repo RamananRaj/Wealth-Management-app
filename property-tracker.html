@@ -7439,13 +7439,13 @@ function renderToolsPage() {
   const users = getUsers ? getUsers() : [];
   const user = users.find(u => u.id === session.id) || session;
   const plan = getUserPlan(user);
-  const isPaid = plan === 'investor' || plan === 'portfolio' || plan === 'admin';
+  const isPaid = session.role === 'admin' || plan === 'investor' || plan === 'portfolio';
 
   // Show/hide property selector and upgrade strip
   const propSel = document.getElementById('tools-prop-selector');
   const upgStrip = document.getElementById('tools-upgrade-strip');
   if (propSel) propSel.style.display = isPaid ? 'block' : 'none';
-  if (upgStrip) upgStrip.style.display = (!isPaid && properties.length > 0) ? 'flex' : 'none';
+  if (upgStrip) upgStrip.style.display = (!isPaid && session.role !== 'admin' && properties.length > 0) ? 'flex' : 'none';
 
   // Populate the property dropdown
   if (isPaid) {
