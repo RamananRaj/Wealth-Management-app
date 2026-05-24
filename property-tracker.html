@@ -2307,6 +2307,9 @@
       <button class="nav-item" onclick="showPage('blog')" id="nav-blog" data-label="Blog">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       </button>
+      <button class="nav-item" onclick="showPage('tools')" id="nav-tools" data-label="Tools">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 8h.01M9.5 8h5"/><path d="M6 11h.01M9.5 11h5"/></svg>
+      </button>
       <button class="nav-item" onclick="showPage('clients')" id="nav-clients" data-label="My Clients" style="display:none;">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
@@ -3308,6 +3311,182 @@
       </button>
       <div id="blog-post-content"><!-- filled by JS --></div>
     </div>
+
+    <!-- TOOLS PAGE -->
+    <div class="page" id="page-tools">
+      <div style="max-width:860px;">
+
+        <!-- Tool selector pills -->
+        <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+          <span id="tool-pill-calc" style="display:inline-flex;align-items:center;gap:6px;background:#EBF4FF;border:1.5px solid #185FA5;color:#185FA5;font-size:13px;font-weight:500;padding:7px 18px;border-radius:99px;cursor:pointer;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Loan repayment calculator
+          </span>
+        </div>
+
+        <!-- Property selector (Investor+ only) -->
+        <div id="tools-prop-selector" style="display:none;background:#EBF4FF;border:1px solid #B5D4F4;border-radius:12px;padding:14px 18px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#185FA5;margin-bottom:3px;">Load from your portfolio</div>
+              <div style="font-size:12px;color:#378ADD;">Select a property to pre-fill loan amount and interest rate.</div>
+            </div>
+            <select id="tools-prop-select" onchange="toolsLoadProperty()" style="border:1px solid #B5D4F4;border-radius:8px;padding:7px 12px;font-size:13px;color:#185FA5;background:#fff;min-width:220px;cursor:pointer;">
+              <option value="">— or calculate from scratch —</option>
+            </select>
+          </div>
+          <div id="tools-prop-note" style="display:none;font-size:12px;color:#378ADD;margin-top:8px;"></div>
+        </div>
+
+        <!-- Upgrade banner (free users) -->
+        <div id="tools-upgrade-strip" style="display:none;background:#FFF8E7;border:1px solid #FAC775;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="font-size:13px;color:#633806;">
+            <strong style="color:#412402;">Investor plan</strong> — upgrade to pre-fill the calculator from your saved properties, saving time and reducing errors.
+          </div>
+          <button onclick="showPage('settings')" style="background:#BA7517;color:#fff;border:none;font-size:12px;font-weight:500;padding:7px 16px;border-radius:7px;cursor:pointer;">View plans</button>
+        </div>
+
+        <!-- Calculator card -->
+        <div style="background:#fff;border:1px solid #E8E8E2;border-radius:16px;padding:24px 28px;">
+
+          <style>
+            .tc-freq-toggle{display:flex;gap:4px;background:#F5F5F2;border:0.5px solid #E0E0DA;border-radius:8px;padding:3px;margin-bottom:20px;width:fit-content;}
+            .tc-freq-btn{border:none;background:transparent;padding:7px 20px;border-radius:6px;font-size:13px;color:#666;cursor:pointer;transition:all 0.15s;}
+            .tc-freq-btn.active{background:#fff;color:#111;font-weight:500;border:0.5px solid #D0D0C8;}
+            .tc-sl-row{margin-bottom:18px;}
+            .tc-sl-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+            .tc-sl-label span:first-child{font-size:13px;color:#666;}
+            .tc-sl-label span:last-child{font-size:15px;font-weight:500;color:#111;}
+            .tc-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:20px 0;}
+            .tc-metric{background:#F7F7F4;border-radius:8px;padding:12px 14px;}
+            .tc-metric-lbl{font-size:11px;color:#888;margin-bottom:4px;}
+            .tc-metric-val{font-size:18px;font-weight:600;color:#111;}
+            .tc-metric-val.tc-green{color:#0F6E56;}
+            .tc-metric-sub{font-size:11px;color:#999;margin-top:2px;}
+            .tc-charts-row{display:grid;grid-template-columns:1fr 200px;gap:16px;margin:20px 0;align-items:start;}
+            .tc-chart-box{background:#fff;border:0.5px solid #E8E8E2;border-radius:12px;padding:16px;}
+            .tc-chart-ttl{font-size:12px;color:#888;margin-bottom:12px;}
+            .tc-details-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;}
+            .tc-detail-box{background:#fff;border:0.5px solid #E8E8E2;border-radius:12px;padding:14px 16px;}
+            .tc-detail-ttl{font-size:12px;font-weight:600;color:#888;margin-bottom:10px;}
+            .tc-drow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:0.5px solid #F0F0EA;font-size:13px;}
+            .tc-drow:last-child{border-bottom:none;}
+            .tc-drow span:first-child{color:#666;}
+            .tc-drow span:last-child{font-weight:500;color:#111;}
+            .tc-drow.tc-saved span:last-child{color:#0F6E56;}
+            .tc-extra-wrap{background:#F7F7F4;border-radius:8px;padding:10px 14px;margin-top:2px;}
+            .tc-dleg{margin-top:10px;display:flex;flex-direction:column;gap:5px;}
+            .tc-dleg-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#666;}
+            .tc-dleg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+            @media(max-width:640px){.tc-charts-row{grid-template-columns:1fr;}.tc-details-row{grid-template-columns:1fr;}}
+          </style>
+
+          <!-- Frequency toggle -->
+          <div class="tc-freq-toggle" role="group" aria-label="Payment frequency">
+            <button class="tc-freq-btn active" data-per="52" onclick="tcSetFreq(this)">Weekly</button>
+            <button class="tc-freq-btn" data-per="26" onclick="tcSetFreq(this)">Fortnightly</button>
+            <button class="tc-freq-btn" data-per="12" onclick="tcSetFreq(this)">Monthly</button>
+          </div>
+
+          <!-- Sliders -->
+          <div class="tc-sl-row">
+            <div class="tc-sl-label"><span>Loan amount</span><span id="tc-lbl-amount">$600,000</span></div>
+            <input type="range" id="tc-sl-amount" min="50000" max="2000000" step="10000" value="600000" oninput="tcUpdate()">
+          </div>
+          <div class="tc-sl-row">
+            <div class="tc-sl-label"><span>Interest rate</span><span id="tc-lbl-rate">6.0%</span></div>
+            <input type="range" id="tc-sl-rate" min="1" max="15" step="0.1" value="6" oninput="tcUpdate()">
+          </div>
+          <div class="tc-sl-row">
+            <div class="tc-sl-label"><span>Loan term</span><span id="tc-lbl-term">30 years</span></div>
+            <input type="range" id="tc-sl-term" min="5" max="40" step="1" value="30" oninput="tcUpdate()">
+          </div>
+
+          <!-- Extra payment -->
+          <div class="tc-extra-wrap">
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">Extra payment per period <span style="color:#C0C0B8;">(optional)</span></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:14px;font-weight:500;color:#888;">$</span>
+              <input type="number" id="tc-extra" min="0" step="50" value="0" placeholder="0" oninput="tcUpdate()"
+                style="flex:1;border:0.5px solid #D8D8D0;border-radius:8px;padding:7px 10px;font-size:14px;background:#fff;color:#111;outline:none;">
+            </div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="tc-metrics">
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Min. payment</div>
+              <div class="tc-metric-val" id="tc-m-minpay">—</div>
+              <div class="tc-metric-sub" id="tc-m-freq">per week</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Total interest</div>
+              <div class="tc-metric-val" id="tc-m-interest">—</div>
+              <div class="tc-metric-sub" id="tc-m-int-sub">at min. payment</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Paid off by</div>
+              <div class="tc-metric-val" id="tc-m-paidoff">—</div>
+              <div class="tc-metric-sub" id="tc-m-paidoff-sub">at min. payment</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Interest saved</div>
+              <div class="tc-metric-val tc-green" id="tc-m-saved">$0</div>
+              <div class="tc-metric-sub">with extra payment</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Years saved</div>
+              <div class="tc-metric-val tc-green" id="tc-m-yrssaved">0</div>
+              <div class="tc-metric-sub">off loan term</div>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="tc-charts-row">
+            <div class="tc-chart-box">
+              <div class="tc-chart-ttl">Loan balance over time</div>
+              <div style="position:relative;height:220px;">
+                <canvas id="tcLineChart" role="img" aria-label="Loan balance over time"></canvas>
+              </div>
+              <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:#888;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:3px;background:#185FA5;border-radius:2px;display:inline-block;"></span>Min. payment</span>
+                <span id="tc-leg-extra" style="display:flex;align-items:center;gap:5px;opacity:0.35;"><span style="width:18px;height:0;border-top:3px dashed #0F6E56;display:inline-block;"></span>With extra</span>
+              </div>
+            </div>
+            <div class="tc-chart-box">
+              <div class="tc-chart-ttl">Cost breakdown</div>
+              <div style="position:relative;height:150px;">
+                <canvas id="tcDonutChart" role="img" aria-label="Principal vs interest donut chart"></canvas>
+              </div>
+              <div class="tc-dleg" id="tc-donut-legend"></div>
+            </div>
+          </div>
+
+          <!-- Detail rows -->
+          <div class="tc-details-row">
+            <div class="tc-detail-box">
+              <div class="tc-detail-ttl">Full loan cost</div>
+              <div class="tc-drow"><span>Principal</span><span id="tcd-principal">—</span></div>
+              <div class="tc-drow"><span>Interest (min. payment)</span><span id="tcd-int-min">—</span></div>
+              <div class="tc-drow" id="tcd-int-extra-row" style="display:none;"><span>Interest (with extra)</span><span id="tcd-int-extra"></span></div>
+              <div class="tc-drow"><span>Total cost</span><span id="tcd-total">—</span></div>
+              <div class="tc-drow tc-saved" id="tcd-saved-row" style="display:none;"><span>You save</span><span id="tcd-you-save"></span></div>
+            </div>
+            <div class="tc-detail-box">
+              <div class="tc-detail-ttl">Extra payment impact</div>
+              <div id="tc-extra-none" style="font-size:13px;color:#999;padding-top:4px;">Add an extra payment above to see the impact.</div>
+              <div id="tc-extra-content" style="display:none;">
+                <div class="tc-drow"><span>Extra per period</span><span id="tcd-extra">$0</span></div>
+                <div class="tc-drow"><span>New payoff</span><span id="tcd-newpayoff">—</span></div>
+                <div class="tc-drow"><span>Time saved</span><span id="tcd-timesaved">—</span></div>
+                <div class="tc-drow tc-saved"><span>Interest saved</span><span id="tcd-intsaved">$0</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /calculator card -->
+      </div><!-- /max-width -->
+    </div><!-- /page-tools -->
 
     <!-- ADVISOR CLIENTS PAGE -->
     <div class="page" id="page-clients">
@@ -7197,8 +7376,8 @@ function saveData() {
 }
 
 // ── NAVIGATION ──────────────────────────────────────────────────────────────
-const pageTitles    = { hub: 'Home', dashboard: 'Dashboard', properties: 'Property Management', detail: 'Property Detail', reports: 'Tax & Reports', propmanagement: 'Tenancy Management', admin: 'Admin', clients: 'My Clients', settings: 'Settings', blog: 'News & Updates', blogpost: 'News & Updates' };
-const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'Portfolio Overview', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'Administration Platform', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights' };
+const pageTitles    = { hub: 'Home', dashboard: 'Dashboard', properties: 'Property Management', detail: 'Property Detail', reports: 'Tax & Reports', propmanagement: 'Tenancy Management', admin: 'Admin', clients: 'My Clients', settings: 'Settings', blog: 'News & Updates', blogpost: 'News & Updates', tools: 'Tools' };
+const pageSubtitles = { hub: 'Your Wealth Dashboard', dashboard: 'Portfolio Overview', properties: 'Portfolio Overview', detail: 'Property Record', reports: 'Portfolio Report', propmanagement: 'Leases & Maintenance', admin: 'Administration Platform', clients: 'Advisor Dashboard', settings: 'My Account', blog: 'Articles & Insights', blogpost: 'Articles & Insights', tools: 'Loan Repayment Calculator' };
 
 function showPage(name) {
   // Stop ribbon carousel when leaving the hub
@@ -7237,6 +7416,7 @@ function showPage(name) {
   if (name === 'crm')   { loadCrmCustomers(); }
   if (name === 'settings') renderSettings();
   if (name === 'blog') renderBlog();
+  if (name === 'tools') renderToolsPage();
   // 'blogpost' is rendered by openBlogPost() directly
   // highlight Blog nav for both blog and blogpost
   if (name === 'blog' || name === 'blogpost') {
@@ -7248,6 +7428,218 @@ function showPage(name) {
     const hubNav = document.getElementById('nav-hub');
     if (hubNav) hubNav.classList.add('active');
   }
+}
+
+// ── TOOLS PAGE ────────────────────────────────────────────────────────────────
+let tcLch = null, tcDch = null, tcPer = 52;
+
+function renderToolsPage() {
+  const session = getSession();
+  if (!session) return;
+  const users = getUsers ? getUsers() : [];
+  const user = users.find(u => u.id === session.id) || session;
+  const plan = getUserPlan(user);
+  const isPaid = plan === 'investor' || plan === 'portfolio' || plan === 'admin';
+
+  // Show/hide property selector and upgrade strip
+  const propSel = document.getElementById('tools-prop-selector');
+  const upgStrip = document.getElementById('tools-upgrade-strip');
+  if (propSel) propSel.style.display = isPaid ? 'block' : 'none';
+  if (upgStrip) upgStrip.style.display = (!isPaid && properties.length > 0) ? 'flex' : 'none';
+
+  // Populate the property dropdown
+  if (isPaid) {
+    const sel = document.getElementById('tools-prop-select');
+    if (sel) {
+      const opts = ['<option value="">— or calculate from scratch —</option>'];
+      properties.forEach(p => {
+        const label = [p.address, p.suburb].filter(Boolean).join(', ') || 'Unnamed property';
+        opts.push(`<option value="${p.id}">${label}</option>`);
+      });
+      sel.innerHTML = opts.join('');
+    }
+  }
+
+  tcUpdate();
+}
+
+function toolsLoadProperty() {
+  const sel = document.getElementById('tools-prop-select');
+  const note = document.getElementById('tools-prop-note');
+  if (!sel) return;
+  const pid = sel.value;
+  if (!pid) { if (note) note.style.display = 'none'; tcUpdate(); return; }
+  const prop = properties.find(p => p.id === pid);
+  if (!prop) return;
+
+  // Pre-fill sliders
+  if (prop.loan) {
+    const loanVal = Math.min(Math.max(Math.round(prop.loan / 10000) * 10000, 50000), 2000000);
+    document.getElementById('tc-sl-amount').value = loanVal;
+  }
+  if (prop.rate) {
+    const rateVal = Math.min(Math.max(parseFloat(prop.rate), 1), 15);
+    document.getElementById('tc-sl-rate').value = rateVal.toFixed(1);
+  }
+
+  if (note) {
+    const parts = [];
+    if (prop.loan) parts.push('Loan: $' + Math.round(prop.loan).toLocaleString('en-AU'));
+    if (prop.rate) parts.push('Rate: ' + parseFloat(prop.rate).toFixed(2) + '%');
+    if (prop.lender) parts.push('Lender: ' + prop.lender);
+    note.style.display = parts.length ? '' : 'none';
+    note.textContent = parts.join('  ·  ');
+  }
+
+  tcUpdate();
+}
+
+function tcSetFreq(btn) {
+  document.querySelectorAll('.tc-freq-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  tcPer = parseInt(btn.dataset.per);
+  tcUpdate();
+}
+
+function tcFmt(n) {
+  return '$' + Math.round(n).toLocaleString('en-AU');
+}
+
+function tcAmort(P, ar, yrs, per, ex) {
+  const r = ar / 100 / per;
+  const n = yrs * per;
+  const mp = P * (r * Math.pow(1+r,n)) / (Math.pow(1+r,n) - 1);
+  const pmt = mp + ex;
+  let bal = P, tot = 0, arr = [P], done = n;
+  for (let i = 0; i < n; i++) {
+    if (bal <= 0) { arr.push(0); continue; }
+    const ic = bal * r, pr = Math.min(pmt - ic, bal);
+    tot += ic; bal -= pr;
+    if (bal < 0.01) { bal = 0; done = i + 1; }
+    arr.push(Math.max(0, bal));
+    if (bal === 0) { for (let j = i+2; j <= n; j++) arr.push(0); break; }
+  }
+  return { mp, tot, arr, done };
+}
+
+function tcUpdate() {
+  const P    = parseFloat(document.getElementById('tc-sl-amount').value);
+  const rate = parseFloat(document.getElementById('tc-sl-rate').value);
+  const yrs  = parseInt(document.getElementById('tc-sl-term').value);
+  const ex   = parseFloat(document.getElementById('tc-extra').value) || 0;
+
+  document.getElementById('tc-lbl-amount').textContent = tcFmt(P);
+  document.getElementById('tc-lbl-rate').textContent   = rate.toFixed(1) + '%';
+  document.getElementById('tc-lbl-term').textContent   = yrs + ' year' + (yrs !== 1 ? 's' : '');
+
+  const fl = tcPer === 52 ? 'per week' : tcPer === 26 ? 'per fortnight' : 'per month';
+  document.getElementById('tc-m-freq').textContent = fl;
+
+  const base   = tcAmort(P, rate, yrs, tcPer, 0);
+  const withEx = tcAmort(P, rate, yrs, tcPer, ex);
+
+  document.getElementById('tc-m-minpay').textContent   = tcFmt(base.mp);
+  document.getElementById('tc-m-interest').textContent = tcFmt(base.tot);
+
+  const now = new Date().getFullYear();
+  const paidYr = now + Math.ceil(withEx.done / tcPer);
+  document.getElementById('tc-m-paidoff').textContent     = paidYr;
+  document.getElementById('tc-m-paidoff-sub').textContent = ex > 0 ? 'with extra payments' : 'at min. payment';
+
+  const saved = ex > 0 ? Math.max(0, base.tot - withEx.tot) : 0;
+  document.getElementById('tc-m-saved').textContent = tcFmt(saved);
+
+  const yrsSaved = Math.max(0, base.done / tcPer - withEx.done / tcPer);
+  document.getElementById('tc-m-yrssaved').textContent = yrsSaved >= 1 ? (Math.floor(yrsSaved) + (yrsSaved % 1 >= 0.5 ? '.5' : '')) : (yrsSaved > 0 ? '< 1' : '0');
+
+  document.getElementById('tcd-principal').textContent = tcFmt(P);
+  document.getElementById('tcd-int-min').textContent   = tcFmt(base.tot);
+  document.getElementById('tcd-total').textContent     = tcFmt(P + (ex > 0 ? withEx.tot : base.tot));
+
+  const exRow = document.getElementById('tcd-int-extra-row');
+  const svRow = document.getElementById('tcd-saved-row');
+  const exNone = document.getElementById('tc-extra-none');
+  const exCont = document.getElementById('tc-extra-content');
+  const legEx  = document.getElementById('tc-leg-extra');
+
+  if (ex > 0) {
+    exRow.style.display = ''; document.getElementById('tcd-int-extra').textContent = tcFmt(withEx.tot);
+    svRow.style.display = ''; document.getElementById('tcd-you-save').textContent  = tcFmt(saved);
+    exNone.style.display = 'none'; exCont.style.display = '';
+    document.getElementById('tcd-extra').textContent     = tcFmt(ex) + ' ' + fl;
+    document.getElementById('tcd-newpayoff').textContent = paidYr;
+    const mths = Math.round(yrsSaved * 12);
+    document.getElementById('tcd-timesaved').textContent = mths >= 24 ? Math.round(mths/12) + ' years' : mths + ' months';
+    document.getElementById('tcd-intsaved').textContent  = tcFmt(saved);
+    if (legEx) legEx.style.opacity = '1';
+  } else {
+    exRow.style.display = 'none'; svRow.style.display = 'none';
+    exNone.style.display = ''; exCont.style.display = 'none';
+    if (legEx) legEx.style.opacity = '0.35';
+  }
+
+  // Build chart data
+  const n = yrs * tcPer;
+  const step = Math.max(1, Math.floor(n / 60));
+  const labels = [], baseData = [], exData = [];
+  for (let i = 0; i <= n; i += step) {
+    labels.push((i / tcPer).toFixed(1));
+    baseData.push(Math.round(base.arr[Math.min(i, base.arr.length-1)]));
+    exData.push(Math.round(withEx.arr[Math.min(i, withEx.arr.length-1)]));
+  }
+
+  if (tcLch) {
+    tcLch.data.labels = labels;
+    tcLch.data.datasets[0].data = baseData;
+    tcLch.data.datasets[1].data = exData;
+    tcLch.data.datasets[1].hidden = (ex === 0);
+    tcLch.update('none');
+  } else {
+    const ctx = document.getElementById('tcLineChart');
+    if (!ctx) return;
+    tcLch = new Chart(ctx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Min. payment', data: baseData, borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,0.08)', borderWidth: 3, fill: true, tension: 0.35, pointRadius: 0 },
+          { label: 'With extra',   data: exData,   borderColor: '#0F6E56', backgroundColor: 'rgba(15,110,86,0.06)',  borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 0, borderDash: [5,4], hidden: (ex === 0) }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 900, easing: 'easeInOutQuart' },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { title: i => 'Year ' + i[0].label, label: i => ' ' + i.dataset.label + ': ' + tcFmt(i.raw) } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#999', font: { size: 11 }, maxTicksLimit: 8 }, border: { display: false } },
+          y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#999', font: { size: 11 }, callback: v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'k') }, border: { display: false } }
+        }
+      }
+    });
+  }
+
+  const dLabels = ex > 0 ? ['Principal', 'Interest paid', 'Interest saved'] : ['Principal', 'Interest'];
+  const dData   = ex > 0 ? [P, withEx.tot, saved] : [P, base.tot];
+  const dColors = ex > 0 ? ['#185FA5', '#E24B4A', '#0F6E56'] : ['#185FA5', '#E24B4A'];
+
+  if (tcDch) {
+    tcDch.data.labels = dLabels;
+    tcDch.data.datasets[0].data = dData;
+    tcDch.data.datasets[0].backgroundColor = dColors;
+    tcDch.update('none');
+  } else {
+    const ctx2 = document.getElementById('tcDonutChart');
+    if (!ctx2) return;
+    tcDch = new Chart(ctx2.getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: dLabels, datasets: [{ data: dData, backgroundColor: dColors, borderWidth: 2, borderColor: 'transparent', hoverOffset: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', animation: { duration: 700 }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => ' ' + i.label + ': ' + tcFmt(i.raw) } } } }
+    });
+  }
+
+  document.getElementById('tc-donut-legend').innerHTML = dLabels.map((l, i) =>
+    `<span class="tc-dleg-item"><span class="tc-dleg-dot" style="background:${dColors[i]}"></span>${l}: ${tcFmt(dData[i])}</span>`
+  ).join('');
 }
 
 // ── TAX CARD TOGGLES ─────────────────────────────────────────────────────────
@@ -10856,5 +11248,6 @@ initApp();
   });
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </body>
 </html>
