@@ -3316,12 +3316,16 @@
     <div class="page" id="page-tools">
       <div style="max-width:860px;">
 
-        <!-- Tool selector pills -->
+        <!-- Tool tab switcher -->
         <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
-          <span id="tool-pill-calc" style="display:inline-flex;align-items:center;gap:6px;background:#EBF4FF;border:1.5px solid #185FA5;color:#185FA5;font-size:13px;font-weight:500;padding:7px 18px;border-radius:99px;cursor:pointer;">
+          <button class="tools-tab-btn" data-tool="loan" onclick="toolsSwitchTool('loan')" style="display:inline-flex;align-items:center;gap:6px;background:#D8EDFF;border:1.5px solid var(--primary);color:var(--primary);font-size:13px;font-weight:600;padding:7px 18px;border-radius:99px;cursor:pointer;transition:all 0.15s;">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            Loan repayment calculator
-          </span>
+            Loan Repayment
+          </button>
+          <button class="tools-tab-btn" data-tool="stamp" onclick="toolsSwitchTool('stamp')" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--gray-200);color:var(--gray-500);font-size:13px;font-weight:400;padding:7px 18px;border-radius:99px;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z"/></svg>
+            Stamp Duty
+          </button>
         </div>
 
         <!-- Property selector (Investor+ only) -->
@@ -3347,7 +3351,7 @@
         </div>
 
         <!-- Calculator card -->
-        <div style="background:#fff;border:1px solid #E8E8E2;border-radius:16px;padding:24px 28px;">
+        <div id="tools-loan-panel" style="background:#fff;border:1px solid #E8E8E2;border-radius:16px;padding:24px 28px;">
 
           <style>
             .tc-freq-toggle{display:flex;gap:4px;background:#F5F5F2;border:0.5px solid #E0E0DA;border-radius:8px;padding:3px;margin:0 auto 20px;width:fit-content;}
@@ -3500,6 +3504,125 @@
           </div>
 
         </div><!-- /calculator card -->
+
+        <!-- Property selector for stamp duty (Investor+ only) -->
+        <div id="sdt-prop-selector" style="display:none;background:#EBF4FF;border:1px solid #B5D4F4;border-radius:12px;padding:14px 18px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#185FA5;margin-bottom:3px;">Load from your portfolio</div>
+              <div style="font-size:12px;color:#378ADD;">Select a property to pre-fill its purchase price and state.</div>
+            </div>
+            <select id="sdt-prop-select" onchange="sdtLoadProperty()" style="border:1px solid #B5D4F4;border-radius:8px;padding:7px 12px;font-size:13px;color:#185FA5;background:#fff;min-width:220px;cursor:pointer;">
+              <option value="">— or calculate from scratch —</option>
+            </select>
+          </div>
+          <div id="sdt-prop-note" style="display:none;font-size:12px;color:#378ADD;margin-top:8px;"></div>
+        </div>
+
+        <!-- Upgrade strip for stamp duty (free users with properties) -->
+        <div id="sdt-upgrade-strip" style="display:none;background:#FFF8E7;border:1px solid #FAC775;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="font-size:13px;color:#633806;">
+            <strong style="color:#412402;">Investor plan</strong> — upgrade to pre-fill the stamp duty calculator from your saved properties, including purchase price and state.
+          </div>
+          <button onclick="showPage('settings')" style="background:#BA7517;color:#fff;border:none;font-size:12px;font-weight:500;padding:7px 16px;border-radius:7px;cursor:pointer;">View plans</button>
+        </div>
+
+        <!-- ── STAMP DUTY CALCULATOR ── -->
+        <div id="tools-stamp-panel" style="display:none;background:#fff;border:1px solid #E8E8E2;border-radius:16px;padding:24px 28px;">
+
+          <style>
+            .sdt-state-btn{border:1px solid var(--gray-200);background:#fff;padding:6px 14px;border-radius:8px;font-size:13px;color:var(--gray-600);cursor:pointer;transition:all 0.15s;}
+            .sdt-state-btn:hover{border-color:var(--primary);color:var(--primary);}
+            .sdt-state-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary);font-weight:500;}
+            .sdt-type-row{display:flex;gap:4px;background:#F5F5F2;border:0.5px solid #E0E0DA;border-radius:8px;padding:3px;margin:0 auto 20px;width:fit-content;}
+            .sdt-type-btn{border:none;background:transparent;padding:7px 16px;border-radius:6px;font-size:13px;color:#666;cursor:pointer;transition:all 0.15s;}
+            .sdt-type-btn.active{background:#fff;color:#111;font-weight:500;border:0.5px solid #D0D0C8;}
+          </style>
+
+          <!-- State selector -->
+          <div style="margin-bottom:20px;">
+            <div style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">State / Territory</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="sdt-states">
+              <button class="sdt-state-btn active" data-state="NSW" onclick="sdtSetState(this)">NSW</button>
+              <button class="sdt-state-btn" data-state="VIC" onclick="sdtSetState(this)">VIC</button>
+              <button class="sdt-state-btn" data-state="QLD" onclick="sdtSetState(this)">QLD</button>
+              <button class="sdt-state-btn" data-state="WA"  onclick="sdtSetState(this)">WA</button>
+              <button class="sdt-state-btn" data-state="SA"  onclick="sdtSetState(this)">SA</button>
+              <button class="sdt-state-btn" data-state="TAS" onclick="sdtSetState(this)">TAS</button>
+              <button class="sdt-state-btn" data-state="ACT" onclick="sdtSetState(this)">ACT</button>
+              <button class="sdt-state-btn" data-state="NT"  onclick="sdtSetState(this)">NT</button>
+            </div>
+          </div>
+
+          <!-- Buyer type toggle -->
+          <div class="sdt-type-row" role="group" aria-label="Buyer type">
+            <button class="sdt-type-btn active" data-type="owner"    onclick="sdtSetType(this)">Owner Occupier</button>
+            <button class="sdt-type-btn" data-type="fhb"      onclick="sdtSetType(this)">First Home Buyer</button>
+            <button class="sdt-type-btn" data-type="investor" onclick="sdtSetType(this)">Investor</button>
+          </div>
+
+          <!-- Property value slider -->
+          <div class="tc-sl-row">
+            <div class="tc-sl-label">
+              <span>Property value</span>
+              <input type="text" id="sdt-lbl-value" value="$750,000" class="tc-val-input" title="Click to type exact value"
+                onfocus="sdtFocusVal(this)" onblur="sdtBlurVal(this)" onkeydown="if(event.key==='Enter')this.blur()">
+            </div>
+            <input type="range" id="sdt-sl-value" min="50000" max="5000000" step="1000" value="750000" oninput="sdtUpdate()">
+          </div>
+
+          <!-- Metric cards -->
+          <div class="tc-metrics">
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Stamp duty payable</div>
+              <div class="tc-metric-val" id="sdt-m-duty">—</div>
+              <div class="tc-metric-sub" id="sdt-m-state-name">New South Wales</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Effective rate</div>
+              <div class="tc-metric-val" id="sdt-m-rate">—</div>
+              <div class="tc-metric-sub">of purchase price</div>
+            </div>
+            <div class="tc-metric" id="sdt-m-saving-box">
+              <div class="tc-metric-lbl">FHB concession</div>
+              <div class="tc-metric-val tc-green" id="sdt-m-saving">—</div>
+              <div class="tc-metric-sub">saving vs. standard</div>
+            </div>
+            <div class="tc-metric">
+              <div class="tc-metric-lbl">Total upfront est.</div>
+              <div class="tc-metric-val" id="sdt-m-total">—</div>
+              <div class="tc-metric-sub">incl. typical costs</div>
+            </div>
+          </div>
+
+          <!-- Breakdown + state comparison -->
+          <div class="tc-details-row">
+            <div class="tc-detail-box">
+              <div class="tc-detail-ttl">Upfront cost estimate</div>
+              <div class="tc-drow"><span>Stamp duty (standard)</span><span id="sdtd-duty">—</span></div>
+              <div class="tc-drow tc-saved" id="sdtd-concession-row" style="display:none;"><span>FHB concession</span><span id="sdtd-concession">—</span></div>
+              <div class="tc-drow"><span>Legal / conveyancing</span><span>~$1,800</span></div>
+              <div class="tc-drow"><span>Building inspection</span><span>~$600</span></div>
+              <div class="tc-drow"><span>Loan registration</span><span>~$200</span></div>
+              <div class="tc-drow"><span style="font-weight:600;">Total upfront</span><span id="sdtd-total" style="font-weight:600;">—</span></div>
+            </div>
+            <div class="tc-detail-box">
+              <div class="tc-detail-ttl">State comparison</div>
+              <div id="sdt-comparison" style="font-size:12px;"><!-- filled by JS --></div>
+              <div style="font-size:11px;color:#B0B0A8;margin-top:10px;">Same value &amp; buyer type across all states.</div>
+            </div>
+          </div>
+
+          <!-- FHB note -->
+          <div id="sdt-fhb-note" style="display:none;margin-top:16px;background:var(--success-light);border:1px solid #9FE1CB;border-radius:10px;padding:12px 16px;font-size:12px;color:var(--success);line-height:1.6;"></div>
+
+          <!-- Disclaimer -->
+          <div style="margin-top:20px;font-size:11px;color:#B0B0A8;border-top:0.5px solid #E8E8E2;padding-top:14px;">
+            Indicative rates only. Stamp duty laws and concession eligibility change regularly. Always confirm with a licensed conveyancer or solicitor before settling.
+          </div>
+
+        </div><!-- /tools-stamp-panel -->
+
       </div><!-- /max-width -->
     </div><!-- /page-tools -->
 
@@ -7456,22 +7579,60 @@ function renderToolsPage() {
   const plan = getUserPlan(user);
   const isPaid = session.role === 'admin' || plan === 'investor' || plan === 'portfolio';
 
-  // Show/hide property selector and upgrade strip
+  // Default: loan panel visible, stamp duty hidden
+  const loanPanel  = document.getElementById('tools-loan-panel');
+  const stampPanel = document.getElementById('tools-stamp-panel');
+  if (loanPanel)  loanPanel.style.display  = '';
+  if (stampPanel) stampPanel.style.display = 'none';
+
+  // Reset tab button styles to loan active
+  document.querySelectorAll('.tools-tab-btn').forEach(btn => {
+    const on = btn.dataset.tool === 'loan';
+    btn.style.background  = on ? 'var(--primary-light)' : 'transparent';
+    btn.style.borderColor = on ? 'var(--primary)'       : 'var(--gray-200)';
+    btn.style.color       = on ? 'var(--primary)'       : 'var(--gray-500)';
+    btn.style.fontWeight  = on ? '600'                  : '400';
+    btn.style.borderWidth = on ? '1.5px'                : '1px';
+  });
+
+  // Show/hide property selector and upgrade strip (loan calc only)
   const propSel = document.getElementById('tools-prop-selector');
   const upgStrip = document.getElementById('tools-upgrade-strip');
   if (propSel) propSel.style.display = isPaid ? 'block' : 'none';
   if (upgStrip) upgStrip.style.display = (!isPaid && session.role !== 'admin' && properties.length > 0) ? 'flex' : 'none';
 
-  // Populate the property dropdown
+  // Populate both property dropdowns for Investor+
   if (isPaid) {
-    const sel = document.getElementById('tools-prop-select');
-    if (sel) {
+    const makeOpts = () => {
       const opts = ['<option value="">— or calculate from scratch —</option>'];
       properties.forEach(p => {
         const label = [p.address, p.suburb].filter(Boolean).join(', ') || 'Unnamed property';
-        opts.push(`<option value="${p.id}">${label}</option>`);
+        const hasPP = p.purchase_price ? ` · $${Math.round(p.purchase_price).toLocaleString('en-AU')}` : '';
+        opts.push(`<option value="${p.id}">${label}${hasPP}</option>`);
       });
-      sel.innerHTML = opts.join('');
+      return opts.join('');
+    };
+
+    // Loan calculator dropdown
+    const loanSel = document.getElementById('tools-prop-select');
+    if (loanSel) loanSel.innerHTML = makeOpts();
+
+    // Stamp duty dropdown — only show properties that have a purchase price
+    const sdtSel = document.getElementById('sdt-prop-select');
+    if (sdtSel) {
+      const opts = ['<option value="">— or calculate from scratch —</option>'];
+      properties.forEach(p => {
+        if (!p.purchase_price) return; // skip if no purchase price recorded
+        const label = [p.address, p.suburb, p.state].filter(Boolean).join(', ') || 'Unnamed property';
+        opts.push(`<option value="${p.id}">${label} · $${Math.round(p.purchase_price).toLocaleString('en-AU')}</option>`);
+      });
+      sdtSel.innerHTML = opts.join('');
+    }
+
+    // Also show the sdt selector if stamp panel is currently active
+    const sdtSelectorEl = document.getElementById('sdt-prop-selector');
+    if (sdtSelectorEl && document.getElementById('tools-stamp-panel')?.style.display !== 'none') {
+      sdtSelectorEl.style.display = 'block';
     }
   }
 
@@ -7681,6 +7842,216 @@ function tcUpdate() {
   document.getElementById('tc-donut-legend').innerHTML = dLabels.map((l, i) =>
     `<span class="tc-dleg-item"><span class="tc-dleg-dot" style="background:${dColors[i]}"></span>${l}: ${tcFmt(dData[i])}</span>`
   ).join('');
+}
+
+// ── STAMP DUTY CALCULATOR ─────────────────────────────────────────────────────
+const SDT = {
+  NSW:{ name:'New South Wales',
+    B:[[0,16000,0,0.0125],[16000,35000,200,0.015],[35000,93000,485,0.0175],[93000,351000,1500,0.035],[351000,1168000,10530,0.045],[1168000,1/0,47295,0.055]],
+    fhb:{exemptTo:800000,thresholdTo:1000000,type:'taper',note:'FHB full exemption for properties ≤$800k, tapered concession $800k–$1M. Applies to new and established homes.'} },
+  VIC:{ name:'Victoria',
+    B:[[0,25000,0,0.014],[25000,130000,350,0.024],[130000,960000,2870,0.06],[960000,2000000,52670,0.065],[2000000,1/0,125270,0.065]],
+    fhb:{exemptTo:600000,thresholdTo:750000,type:'taper',note:'FHB full exemption ≤$600k, tapered discount $600k–$750k.'} },
+  QLD:{ name:'Queensland',
+    B:[[0,5000,0,0],[5000,75000,0,0.015],[75000,540000,1050,0.035],[540000,1000000,17325,0.045],[1000000,1/0,38025,0.0575]],
+    fhb:{exemptTo:500000,thresholdTo:550000,type:'taper',note:'FHB full concession ≤$500k, graduated rebate $500k–$550k on eligible homes.'} },
+  WA: { name:'Western Australia',
+    B:[[0,120000,0,0.019],[120000,150000,2280,0.0285],[150000,360000,3135,0.038],[360000,725000,11115,0.0475],[725000,1/0,28453.75,0.0515]],
+    fhb:{exemptTo:430000,thresholdTo:530000,type:'taper',note:'FHB exemption ≤$430k (established) or ≤$530k (new home), with a graduated concession above those thresholds.'} },
+  SA: { name:'South Australia',
+    B:[[0,12000,0,0.01],[12000,30000,120,0.02],[30000,50000,480,0.03],[50000,100000,1080,0.035],[100000,200000,2830,0.04],[200000,250000,6830,0.0425],[250000,300000,8955,0.0475],[300000,500000,11330,0.05],[500000,1/0,21330,0.055]],
+    fhb:{exemptTo:null,note:'SA has no stamp duty concession for first home buyers. The $15,000 FHOG may apply for eligible new builds.'} },
+  TAS:{ name:'Tasmania',
+    B:[[0,3000,0,0.0175],[3000,25000,52.5,0.0225],[25000,75000,547.5,0.035],[75000,200000,2297.5,0.04],[200000,375000,7297.5,0.0425],[375000,725000,14734,0.045],[725000,1/0,30484,0.045]],
+    fhb:{exemptTo:600000,thresholdTo:null,type:'half',note:'FHB 50% discount on stamp duty for homes valued ≤$600k.'} },
+  ACT:{ name:'Australian Capital Territory',
+    B:[[0,200000,0,0.006],[200000,300000,1200,0.022],[300000,500000,3400,0.034],[500000,750000,10200,0.0432],[750000,1000000,21000,0.059],[1000000,1455000,35750,0.064],[1455000,1/0,64870,0.0454]],
+    fhb:{exemptTo:1000000,thresholdTo:null,type:'full',note:'FHB may receive a full stamp duty concession on homes ≤$1M (income and property ownership tests apply). ACT is transitioning to a land tax model.'} },
+  NT: { name:'Northern Territory', B:null,
+    fhb:{exemptTo:null,note:'NT has no specific stamp duty concession for first home buyers. A $10,000 First Home Owner Grant may apply for eligible new builds.'} }
+};
+let sdtState = 'NSW', sdtBuyerType = 'owner';
+
+function sdtDuty(st, v) {
+  if (st === 'NT') {
+    if (v <= 525000) { const k=v/1000; return 0.06571441*k*k+15*k; }
+    return v * 0.0495;
+  }
+  const B = SDT[st].B;
+  for (let i=B.length-1; i>=0; i--) if (v > B[i][0]) return B[i][2] + (v-B[i][0])*B[i][3];
+  return 0;
+}
+
+function sdtConcession(st, v, type) {
+  if (type !== 'fhb') return 0;
+  const f = SDT[st].fhb;
+  if (!f || !f.exemptTo) return 0;
+  const d = sdtDuty(st, v);
+  if (f.type === 'half') return v <= f.exemptTo ? d*0.5 : 0;
+  if (f.type === 'full') return v <= f.exemptTo ? d : 0;
+  if (v <= f.exemptTo) return d;
+  if (f.thresholdTo && v <= f.thresholdTo) return d*(f.thresholdTo-v)/(f.thresholdTo-f.exemptTo);
+  return 0;
+}
+
+function sdtFmt(n) { return '$' + Math.round(n).toLocaleString('en-AU'); }
+
+function sdtLoadProperty() {
+  const sel  = document.getElementById('sdt-prop-select');
+  const note = document.getElementById('sdt-prop-note');
+  if (!sel) return;
+  const pid = sel.value;
+  if (!pid) { if (note) note.style.display = 'none'; sdtUpdate(); return; }
+  const prop = properties.find(p => p.id === pid);
+  if (!prop) return;
+
+  // Pre-fill purchase price → value slider
+  if (prop.purchase_price) {
+    const pv = Math.min(Math.max(Math.round(prop.purchase_price / 1000) * 1000, 50000), 5000000);
+    document.getElementById('sdt-sl-value').value = pv;
+  }
+
+  // Pre-select state → click the matching state button
+  if (prop.state) {
+    const stateAbbr = prop.state.trim().toUpperCase();
+    const btn = document.querySelector(`#sdt-states button[data-state="${stateAbbr}"]`);
+    if (btn) {
+      document.querySelectorAll('#sdt-states button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sdtState = stateAbbr;
+    }
+  }
+
+  // Show pre-fill note
+  if (note) {
+    const parts = [];
+    const addr = [prop.address, prop.suburb, prop.state].filter(Boolean).join(', ');
+    if (addr) parts.push(addr);
+    if (prop.purchase_price) parts.push('Purchase price: $' + Math.round(prop.purchase_price).toLocaleString('en-AU'));
+    if (prop.purchase_date) parts.push('Purchased: ' + prop.purchase_date);
+    note.style.display = parts.length ? '' : 'none';
+    note.textContent   = parts.join('  ·  ');
+  }
+
+  sdtUpdate();
+}
+
+function sdtFocusVal(input) {
+  input.value = document.getElementById('sdt-sl-value').value;
+  input.select();
+}
+
+function sdtBlurVal(input) {
+  let v = parseFloat(input.value.replace(/[^0-9.]/g,''));
+  if (isNaN(v)) { sdtUpdate(); return; }
+  v = Math.min(Math.max(Math.round(v/1000)*1000, 50000), 5000000);
+  document.getElementById('sdt-sl-value').value = v;
+  sdtUpdate();
+}
+
+function sdtSetState(btn) {
+  document.querySelectorAll('#sdt-states button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  sdtState = btn.dataset.state;
+  sdtUpdate();
+}
+
+function sdtSetType(btn) {
+  document.querySelectorAll('.sdt-type-row button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  sdtBuyerType = btn.dataset.type;
+  sdtUpdate();
+}
+
+function sdtUpdate() {
+  const slEl = document.getElementById('sdt-sl-value');
+  if (!slEl) return;
+  const v = parseFloat(slEl.value);
+  if (isNaN(v)) return;
+
+  const lbl = document.getElementById('sdt-lbl-value');
+  if (document.activeElement !== lbl) lbl.value = sdtFmt(v);
+
+  const d = sdtDuty(sdtState, v);
+  const c = sdtConcession(sdtState, v, sdtBuyerType);
+  const payable = Math.max(0, d - c);
+  const upfront = payable + 2600;
+
+  document.getElementById('sdt-m-duty').textContent       = sdtFmt(payable);
+  document.getElementById('sdt-m-state-name').textContent = SDT[sdtState].name;
+  document.getElementById('sdt-m-rate').textContent       = v > 0 ? (payable/v*100).toFixed(2)+'%' : '0.00%';
+  document.getElementById('sdt-m-total').textContent      = sdtFmt(upfront);
+  document.getElementById('sdt-m-saving').textContent     = c > 0 ? sdtFmt(c) : '—';
+  document.getElementById('sdt-m-saving-box').style.opacity = c > 0 ? '1' : '0.4';
+
+  document.getElementById('sdtd-duty').textContent = sdtFmt(d);
+  const cRow = document.getElementById('sdtd-concession-row');
+  if (c > 0) { cRow.style.display=''; document.getElementById('sdtd-concession').textContent='− '+sdtFmt(c); }
+  else cRow.style.display = 'none';
+  document.getElementById('sdtd-total').textContent = sdtFmt(upfront);
+
+  const noteEl = document.getElementById('sdt-fhb-note');
+  const f = SDT[sdtState].fhb;
+  if (sdtBuyerType === 'fhb' && f && f.note) { noteEl.textContent='✦ '+f.note; noteEl.style.display=''; }
+  else noteEl.style.display = 'none';
+
+  // State comparison — sorted cheapest first
+  const rows = Object.keys(SDT).map(s => {
+    const p = Math.max(0, sdtDuty(s,v) - sdtConcession(s,v,sdtBuyerType));
+    return {s, p};
+  }).sort((a,b) => a.p-b.p);
+  const maxP = Math.max(...rows.map(r=>r.p), 1);
+  document.getElementById('sdt-comparison').innerHTML = rows.map(r =>
+    `<div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+        <span style="color:${r.s===sdtState?'var(--primary)':'var(--gray-500)'};font-weight:${r.s===sdtState?'600':'400'};">${r.s}</span>
+        <span style="color:${r.s===sdtState?'var(--primary)':'var(--gray-700)'};font-weight:${r.s===sdtState?'600':'400'};">${sdtFmt(r.p)}</span>
+      </div>
+      <div style="height:5px;background:var(--gray-100);border-radius:3px;">
+        <div style="height:100%;width:${(r.p/maxP*100).toFixed(1)}%;background:${r.s===sdtState?'var(--primary)':'var(--gray-300)'};border-radius:3px;transition:width 0.4s;"></div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function toolsSwitchTool(tool) {
+  const loanPanel  = document.getElementById('tools-loan-panel');
+  const stampPanel = document.getElementById('tools-stamp-panel');
+  if (loanPanel)  loanPanel.style.display  = tool === 'loan'  ? '' : 'none';
+  if (stampPanel) stampPanel.style.display = tool === 'stamp' ? '' : 'none';
+
+  const session = getSession();
+  if (session) {
+    const users  = getUsers ? getUsers() : [];
+    const user   = users.find(u => u.id === session.id) || session;
+    const plan   = getUserPlan(user);
+    const isPaid = session.role === 'admin' || plan === 'investor' || plan === 'portfolio';
+    const hasProps = properties.length > 0;
+
+    // Loan calculator selectors
+    const propSel  = document.getElementById('tools-prop-selector');
+    const upgStrip = document.getElementById('tools-upgrade-strip');
+    if (propSel)  propSel.style.display  = (tool === 'loan' && isPaid) ? 'block' : 'none';
+    if (upgStrip) upgStrip.style.display = (tool === 'loan' && !isPaid && session.role !== 'admin' && hasProps) ? 'flex' : 'none';
+
+    // Stamp duty selectors
+    const sdtSel  = document.getElementById('sdt-prop-selector');
+    const sdtStrip = document.getElementById('sdt-upgrade-strip');
+    if (sdtSel)   sdtSel.style.display   = (tool === 'stamp' && isPaid) ? 'block' : 'none';
+    if (sdtStrip) sdtStrip.style.display = (tool === 'stamp' && !isPaid && session.role !== 'admin' && hasProps) ? 'flex' : 'none';
+  }
+
+  // Update tab button styles
+  document.querySelectorAll('.tools-tab-btn').forEach(btn => {
+    const on = btn.dataset.tool === tool;
+    btn.style.background  = on ? 'var(--primary-light)' : 'transparent';
+    btn.style.borderColor = on ? 'var(--primary)'       : 'var(--gray-200)';
+    btn.style.color       = on ? 'var(--primary)'       : 'var(--gray-500)';
+    btn.style.fontWeight  = on ? '600'                  : '400';
+    btn.style.borderWidth = on ? '1.5px'                : '1px';
+  });
+
+  if (tool === 'stamp') sdtUpdate();
 }
 
 // ── TAX CARD TOGGLES ─────────────────────────────────────────────────────────
