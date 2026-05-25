@@ -3326,6 +3326,10 @@
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z"/></svg>
             Stamp Duty
           </button>
+          <button class="tools-tab-btn" data-tool="equity" onclick="toolsSwitchTool('equity')" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--gray-200);color:var(--gray-500);font-size:13px;font-weight:400;padding:7px 18px;border-radius:99px;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5a9 9 0 1 0 18 0 9 9 0 0 0-18 0zm9-4.5v9m-4.5-4.5h9"/></svg>
+            Equity
+          </button>
         </div>
 
         <!-- Property selector (Investor+ only) -->
@@ -3622,6 +3626,122 @@
           </div>
 
         </div><!-- /tools-stamp-panel -->
+
+        <!-- EQUITY CALCULATOR PANEL -->
+        <div id="tools-equity-panel" style="display:none;">
+
+          <!-- CSS for equity classes -->
+          <style>
+            .eq-sum-card{background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:14px 16px;}
+            .eq-sum-label{font-size:11px;color:var(--gray-500);font-weight:500;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;}
+            .eq-sum-val{font-size:20px;font-weight:700;color:var(--gray-900);}
+            .eq-sum-val.grn{color:var(--success);}
+            .eq-sum-sub{font-size:11px;color:var(--gray-400);margin-top:2px;}
+            .eq-tgl{border:none;border-radius:99px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+            .eq-prop-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:18px 20px;}
+            .eq-prop-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+            .eq-prop-addr{font-size:13px;font-weight:600;color:var(--gray-900);}
+            .eq-lvr-badge{font-size:11px;font-weight:600;border-radius:99px;padding:3px 10px;white-space:nowrap;}
+            .eq-lvr-badge.grn{background:#DCF4E1;color:var(--success);}
+            .eq-lvr-badge.amb{background:var(--warning-light);color:var(--warning);}
+            .eq-lvr-badge.red{background:var(--danger-light);color:var(--danger);}
+            .eq-prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+            .eq-pmet{background:var(--gray-50);border-radius:8px;padding:10px 12px;}
+            .eq-pmet-label{font-size:10px;color:var(--gray-500);font-weight:500;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;}
+            .eq-pmet-val{font-size:15px;font-weight:700;color:var(--gray-900);}
+            .eq-pmet-val.grn{color:var(--success);}
+            .eq-pmet-val.amb{color:var(--warning);}
+            .eq-pmet-val.red{color:var(--danger);}
+            .eq-lvr-track{background:var(--gray-100);border-radius:99px;height:6px;position:relative;margin-bottom:6px;}
+            .eq-lvr-fill{height:100%;border-radius:99px;transition:width 0.4s;}
+            .eq-lvr-fill.grn{background:var(--success);}
+            .eq-lvr-fill.amb{background:var(--warning);}
+            .eq-lvr-fill.red{background:var(--danger);}
+            .eq-lvr-marker{position:absolute;top:-4px;height:14px;width:2px;background:var(--gray-400);border-radius:1px;}
+            .eq-owner-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+            .eq-owner-chip{display:inline-flex;align-items:center;gap:5px;background:var(--primary-light);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:500;color:var(--primary);}
+            .eq-owner-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+          </style>
+
+          <!-- Upgrade strip (free users) -->
+          <div id="eq-upgrade-strip" style="display:none;background:var(--warning-light);border:1px solid #FAC775;border-radius:10px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--warning);">Investor plan required</div>
+              <div style="font-size:12px;color:var(--gray-600);margin-top:2px;">Upgrade to Investor+ to unlock the Equity Calculator and see your portfolio's full equity picture.</div>
+            </div>
+            <button onclick="showPage('settings')" style="background:var(--warning);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;">View plans</button>
+          </div>
+
+          <!-- Main content (Investor+ only) -->
+          <div id="eq-main" style="display:none;">
+
+            <!-- View toggle -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;flex-wrap:wrap;">
+              <span style="font-size:13px;color:var(--gray-600);font-weight:500;">View:</span>
+              <div style="display:flex;background:var(--gray-100);border-radius:99px;padding:3px;gap:2px;">
+                <button class="eq-tgl" data-view="share" onclick="equitySetView('share')" style="background:#fff;color:var(--primary);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.12);">My share only</button>
+                <button class="eq-tgl" data-view="full"  onclick="equitySetView('full')"  style="background:transparent;color:var(--gray-500);font-weight:400;box-shadow:none;">Full portfolio</button>
+              </div>
+              <span id="eq-share-name" style="font-size:11px;color:var(--gray-400);"></span>
+            </div>
+
+            <!-- Portfolio summary cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+              <div class="eq-sum-card">
+                <div class="eq-sum-label">Portfolio Value</div>
+                <div class="eq-sum-val" id="eq-s-value">–</div>
+              </div>
+              <div class="eq-sum-card">
+                <div class="eq-sum-label">Total Loans</div>
+                <div class="eq-sum-val" id="eq-s-loan">–</div>
+                <div class="eq-sum-sub" id="eq-s-lvr">Blended LVR –</div>
+              </div>
+              <div class="eq-sum-card">
+                <div class="eq-sum-label">Total Equity</div>
+                <div class="eq-sum-val grn" id="eq-s-equity">–</div>
+              </div>
+              <div class="eq-sum-card">
+                <div class="eq-sum-label">
+                  Usable Equity
+                  <span data-tip="Equity available at 80% LVR — the buffer most lenders allow you to draw against." onmouseover="showInfoTip(this,event)" onmouseout="hideInfoTip()" style="cursor:help;color:var(--gray-400);font-size:10px;border-bottom:1px dotted var(--gray-300);margin-left:3px;">?</span>
+                </div>
+                <div class="eq-sum-val grn" id="eq-s-usable">–</div>
+              </div>
+            </div>
+
+            <!-- Per-property cards -->
+            <div id="eq-prop-list" style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;"></div>
+
+            <!-- Releasable equity summary -->
+            <div id="eq-release-box" style="background:var(--success-light);border:1px solid #A3D9A5;border-radius:12px;padding:20px 24px;">
+              <div style="font-size:13px;font-weight:700;color:var(--success);margin-bottom:16px;display:flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Equity Release Summary
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;">
+                <div>
+                  <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Can access now</div>
+                  <div id="eq-r-access" style="font-size:22px;font-weight:700;color:var(--success);">–</div>
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Potential purchase price</div>
+                  <div id="eq-r-purchase" style="font-size:22px;font-weight:700;color:var(--success);">–</div>
+                  <div style="font-size:10px;color:#5AA06C;margin-top:2px;">usable equity ÷ 0.20 (20% deposit)</div>
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Properties with equity</div>
+                  <div id="eq-r-count" style="font-size:22px;font-weight:700;color:var(--success);">–</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;font-size:11px;color:#B0B0A8;border-top:0.5px solid #E8E8E2;padding-top:12px;">
+              Equity figures are estimates based on recorded property values and loan balances. LVR thresholds may vary by lender and property type. Consult your mortgage broker before making investment decisions.
+            </div>
+
+          </div><!-- /eq-main -->
+
+        </div><!-- /tools-equity-panel -->
 
       </div><!-- /max-width -->
     </div><!-- /page-tools -->
@@ -7579,11 +7699,13 @@ function renderToolsPage() {
   const plan = getUserPlan(user);
   const isPaid = session.role === 'admin' || plan === 'investor' || plan === 'portfolio';
 
-  // Default: loan panel visible, stamp duty hidden
-  const loanPanel  = document.getElementById('tools-loan-panel');
-  const stampPanel = document.getElementById('tools-stamp-panel');
-  if (loanPanel)  loanPanel.style.display  = '';
-  if (stampPanel) stampPanel.style.display = 'none';
+  // Default: loan panel visible, stamp duty and equity hidden
+  const loanPanel   = document.getElementById('tools-loan-panel');
+  const stampPanel  = document.getElementById('tools-stamp-panel');
+  const equityPanel = document.getElementById('tools-equity-panel');
+  if (loanPanel)   loanPanel.style.display   = '';
+  if (stampPanel)  stampPanel.style.display  = 'none';
+  if (equityPanel) equityPanel.style.display = 'none';
 
   // Reset tab button styles to loan active
   document.querySelectorAll('.tools-tab-btn').forEach(btn => {
@@ -8015,10 +8137,12 @@ function sdtUpdate() {
 }
 
 function toolsSwitchTool(tool) {
-  const loanPanel  = document.getElementById('tools-loan-panel');
-  const stampPanel = document.getElementById('tools-stamp-panel');
-  if (loanPanel)  loanPanel.style.display  = tool === 'loan'  ? '' : 'none';
-  if (stampPanel) stampPanel.style.display = tool === 'stamp' ? '' : 'none';
+  const loanPanel   = document.getElementById('tools-loan-panel');
+  const stampPanel  = document.getElementById('tools-stamp-panel');
+  const equityPanel = document.getElementById('tools-equity-panel');
+  if (loanPanel)   loanPanel.style.display   = tool === 'loan'   ? '' : 'none';
+  if (stampPanel)  stampPanel.style.display  = tool === 'stamp'  ? '' : 'none';
+  if (equityPanel) equityPanel.style.display = tool === 'equity' ? '' : 'none';
 
   const session = getSession();
   if (session) {
@@ -8035,7 +8159,7 @@ function toolsSwitchTool(tool) {
     if (upgStrip) upgStrip.style.display = (tool === 'loan' && !isPaid && session.role !== 'admin' && hasProps) ? 'flex' : 'none';
 
     // Stamp duty selectors
-    const sdtSel  = document.getElementById('sdt-prop-selector');
+    const sdtSel   = document.getElementById('sdt-prop-selector');
     const sdtStrip = document.getElementById('sdt-upgrade-strip');
     if (sdtSel)   sdtSel.style.display   = (tool === 'stamp' && isPaid) ? 'block' : 'none';
     if (sdtStrip) sdtStrip.style.display = (tool === 'stamp' && !isPaid && session.role !== 'admin' && hasProps) ? 'flex' : 'none';
@@ -8051,7 +8175,190 @@ function toolsSwitchTool(tool) {
     btn.style.borderWidth = on ? '1.5px'                : '1px';
   });
 
-  if (tool === 'stamp') sdtUpdate();
+  if (tool === 'stamp')  sdtUpdate();
+  if (tool === 'equity') renderEquityPage();
+}
+
+// ── EQUITY CALCULATOR ────────────────────────────────────────────────────────
+let eqView = 'share'; // 'share' | 'full'
+const EQ_CHIP_COLORS = ['#0176D3','#2E844A','#DD7A01','#BA0517','#7B5EA7','#00746F'];
+
+function getUserOwnerShare(prop) {
+  // Returns {pct, matched} — pct is 0–100, matched=true if the logged-in user was found in owners list
+  const session = getSession();
+  if (!session) return { pct: 100, matched: false };
+  const owners = (prop.owners || []).filter(o => o.name && o.pct > 0);
+  if (!owners.length) return { pct: 100, matched: false };
+
+  const fname = (session.first_name     || '').trim().toLowerCase();
+  const lname = (session.last_name      || '').trim().toLowerCase();
+  const pname = (session.preferred_name || '').trim().toLowerCase();
+  const fullName = [fname, lname].filter(Boolean).join(' ');
+
+  const match = owners.find(o => {
+    const n = o.name.trim().toLowerCase();
+    return n === fullName || n === fname || n === lname || (pname && n === pname);
+  });
+  if (match) return { pct: match.pct, matched: true };
+  return { pct: 100, matched: false }; // fallback: show full figures
+}
+
+function eqFmt(n) {
+  if (!n && n !== 0) return '–';
+  const abs = Math.abs(n);
+  return (n < 0 ? '-' : '') + '$' + Math.round(abs).toLocaleString('en-AU');
+}
+
+function equitySetView(view) {
+  eqView = view;
+  document.querySelectorAll('.eq-tgl').forEach(btn => {
+    const on = btn.dataset.view === view;
+    btn.style.background = on ? '#fff'              : 'transparent';
+    btn.style.color      = on ? 'var(--primary)'    : 'var(--gray-500)';
+    btn.style.fontWeight = on ? '600'               : '400';
+    btn.style.boxShadow  = on ? '0 1px 3px rgba(0,0,0,0.12)' : 'none';
+  });
+  equityRender();
+}
+
+function equityRender() {
+  const eqMain = document.getElementById('eq-main');
+  if (!eqMain || eqMain.style.display === 'none') return;
+
+  // Update share-name label
+  const session = getSession();
+  const nameEl  = document.getElementById('eq-share-name');
+  if (nameEl && session) {
+    const name = session.preferred_name || session.first_name || '';
+    nameEl.textContent = (eqView === 'share' && name) ? `(${name}'s share)` : '';
+  }
+
+  const listEl = document.getElementById('eq-prop-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  let totalValue = 0, totalLoan = 0, totalEquity = 0, totalUsable = 0, propsWithUsable = 0;
+
+  properties.forEach(prop => {
+    const value  = prop.value || 0;
+    const loan   = prop.loan  || 0;
+    const equity = value - loan;
+    const usable = Math.max(0, value * 0.8 - loan);
+    const lvr    = value > 0 ? (loan / value) * 100 : 0;
+
+    const shareInfo = getUserOwnerShare(prop);
+    const pct = eqView === 'share' ? (shareInfo.pct / 100) : 1;
+
+    const sValue  = value  * pct;
+    const sLoan   = loan   * pct;
+    const sEquity = equity * pct;
+    const sUsable = usable * pct;
+
+    totalValue  += sValue;
+    totalLoan   += sLoan;
+    totalEquity += sEquity;
+    totalUsable += sUsable;
+    if (usable > 0) propsWithUsable++;
+
+    const lvrClass = lvr < 70 ? 'grn' : lvr <= 80 ? 'amb' : 'red';
+    const lvrFill  = Math.min(lvr, 100).toFixed(1);
+
+    // Owner chips
+    const owners = (prop.owners || []).filter(o => o.name && o.pct > 0);
+    const chipsHtml = owners.length ? `
+      <div class="eq-owner-chips">
+        ${owners.map((o, i) => `<span class="eq-owner-chip">
+          <span class="eq-owner-dot" style="background:${EQ_CHIP_COLORS[i % EQ_CHIP_COLORS.length]};"></span>
+          ${o.name}&nbsp;·&nbsp;${o.pct}%
+        </span>`).join('')}
+      </div>` : '';
+
+    const shareNote = (eqView === 'share' && shareInfo.pct < 100)
+      ? `<div style="font-size:10px;color:var(--gray-400);margin-top:3px;">
+           ${shareInfo.matched ? `Showing your ${shareInfo.pct}% share` : 'No ownership match — showing full figures'}
+         </div>`
+      : '';
+
+    const valueLabelSuffix = (eqView === 'share' && shareInfo.pct < 100) ? ` (${shareInfo.pct}%)` : '';
+    const addr = [prop.address, prop.suburb, prop.state].filter(Boolean).join(', ') || 'Unnamed property';
+
+    const card = document.createElement('div');
+    card.className = 'eq-prop-card';
+    card.innerHTML = `
+      <div class="eq-prop-header">
+        <div>
+          <div class="eq-prop-addr">${addr}</div>
+          ${shareNote}
+        </div>
+        <span class="eq-lvr-badge ${lvrClass}">LVR ${lvr.toFixed(1)}%</span>
+      </div>
+      <div class="eq-prop-grid">
+        <div class="eq-pmet">
+          <div class="eq-pmet-label">Value${valueLabelSuffix}</div>
+          <div class="eq-pmet-val">${eqFmt(sValue)}</div>
+        </div>
+        <div class="eq-pmet">
+          <div class="eq-pmet-label">Equity</div>
+          <div class="eq-pmet-val ${lvrClass}">${eqFmt(sEquity)}</div>
+        </div>
+        <div class="eq-pmet">
+          <div class="eq-pmet-label">Usable @ 80% LVR</div>
+          <div class="eq-pmet-val grn">${sUsable > 0
+            ? eqFmt(sUsable)
+            : '<span style="color:var(--gray-400);font-size:12px;font-weight:400;">None available</span>'}</div>
+        </div>
+      </div>
+      <div>
+        <div class="eq-lvr-track">
+          <div class="eq-lvr-fill ${lvrClass}" style="width:${lvrFill}%;"></div>
+          <div class="eq-lvr-marker" style="left:80%;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-400);">
+          <span>0%</span>
+          <span style="position:relative;left:calc(80% - 56px);">80% threshold</span>
+          <span>100%</span>
+        </div>
+      </div>
+      ${chipsHtml}
+    `;
+    listEl.appendChild(card);
+  });
+
+  // Update portfolio summary
+  const blendedLvr = totalValue > 0 ? (totalLoan / totalValue) * 100 : 0;
+  document.getElementById('eq-s-value').textContent  = eqFmt(totalValue);
+  document.getElementById('eq-s-loan').textContent   = eqFmt(totalLoan);
+  document.getElementById('eq-s-lvr').textContent    = `Blended LVR ${blendedLvr.toFixed(1)}%`;
+  document.getElementById('eq-s-equity').textContent = eqFmt(totalEquity);
+  document.getElementById('eq-s-usable').textContent = eqFmt(totalUsable);
+
+  // Update release summary
+  document.getElementById('eq-r-access').textContent   = eqFmt(totalUsable);
+  document.getElementById('eq-r-purchase').textContent = eqFmt(totalUsable > 0 ? totalUsable / 0.2 : 0);
+  document.getElementById('eq-r-count').textContent    = propsWithUsable + ' of ' + properties.length;
+}
+
+function renderEquityPage() {
+  const session = getSession();
+  if (!session) return;
+  const users  = getUsers ? getUsers() : [];
+  const user   = users.find(u => u.id === session.id) || session;
+  const plan   = getUserPlan(user);
+  const isPaid = session.role === 'admin' || plan === 'investor' || plan === 'portfolio';
+
+  const eqUpgrade = document.getElementById('eq-upgrade-strip');
+  const eqMain    = document.getElementById('eq-main');
+
+  if (!isPaid) {
+    if (eqUpgrade) eqUpgrade.style.display = 'flex';
+    if (eqMain)    eqMain.style.display    = 'none';
+    return;
+  }
+
+  if (eqUpgrade) eqUpgrade.style.display = 'none';
+  if (eqMain)    eqMain.style.display    = 'block';
+
+  equitySetView(eqView);
 }
 
 // ── TAX CARD TOGGLES ─────────────────────────────────────────────────────────
